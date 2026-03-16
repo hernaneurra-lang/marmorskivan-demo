@@ -1,0 +1,60 @@
+{
+  "name": "marmorskivan",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+
+  "scripts": {
+    "dev": "vite",
+
+    "clean": "rimraf dist node_modules/.vite",
+
+    "build": "node scripts/build.mjs",
+
+    "build:withsitemap": "node scripts/build.mjs && node scripts/generate-sitemaps-from-dist.mjs",
+
+    "build:justvite": "vite build",
+    "build:fast": "vite build",
+
+    "build:nositemap": "cross-env SKIP_SITEMAP=1 node scripts/build.mjs",
+    "build:noprerender": "cross-env SKIP_PRERENDER=1 node scripts/build.mjs",
+
+    "preview": "vite preview",
+
+    "api": "node api-dev/server.mjs"
+  },
+
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "fast-xml-parser": "^5.2.5",
+    "framer-motion": "^11.18.2",
+    "i18next": "^25.7.3",
+    "jsdom": "^26.1.0",
+    "lucide-react": "^0.542.0",
+    "node-fetch": "^3.3.2",
+    "openai": "^5.20.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-helmet-async": "^2.0.5",
+    "react-i18next": "^16.5.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.8.2",
+    "replicate": "^1.1.0"
+  },
+
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^5.0.2",
+
+    "autoprefixer": "^10.4.18",
+    "chokidar": "^3.6.0",
+    "cross-env": "^7.0.3",
+    "postcss": "^8.4.35",
+    "puppeteer": "^24.0.0",
+    "rimraf": "^6.1.2",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.4.21"
+  }
+}

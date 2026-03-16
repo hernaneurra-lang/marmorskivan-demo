@@ -1,0 +1,14 @@
+<?php
+$cust    = $cust ?? [];
+$variant = $variant ?? [];
+$totals  = $totals ?? [];
+?>
+<div style="font-family:Arial,sans-serif;padding:20px;">
+  <h2>TESTMALL – Customer</h2>
+  <p>Hej <?= htmlspecialchars($cust['name'] ?? 'Okänd') ?>,</p>
+  <p>Detta är en testmall för kund.</p>
+  <ul>
+    <li><strong>Material:</strong> <?= htmlspecialchars($variant['name'] ?? '-') ?></li>
+    <li><strong>Totalpris:</strong> <?= number_format((float)($totals['total'] ?? 0), 0, ',', ' ') ?> kr</li>
+  </ul>
+</div>

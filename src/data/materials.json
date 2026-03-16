@@ -1,0 +1,50 @@
+{
+  "Granit": [
+    {
+      "id": "nero-assoluto",
+      "name": "Nero Assoluto",
+      "price": 2890,
+      "hex": "#151515",
+      "image": "/images/materials/nero-assoluto.svg"
+    },
+    {
+      "id": "bianco-sardo",
+      "name": "Bianco Sardo",
+      "price": 2390,
+      "hex": "#d4d7da",
+      "image": "/images/materials/bianco-sardo.svg"
+    }
+  ],
+  "Komposit": [
+    {
+      "id": "calacatta-gold",
+      "name": "Calacatta Gold",
+      "price": 3490,
+      "hex": "#f4f3ef",
+      "image": "/images/materials/calacatta-gold.svg"
+    },
+    {
+      "id": "pure-white",
+      "name": "Pure White",
+      "price": 3190,
+      "hex": "#f8f8f8",
+      "image": "/images/materials/pure-white.svg"
+    }
+  ],
+  "Marmor": [
+    {
+      "id": "carrara",
+      "name": "Carrara C",
+      "price": 3290,
+      "hex": "#eef0f2",
+      "image": "/images/materials/carrara.svg"
+    },
+    {
+      "id": "nero-marquina",
+      "name": "Nero Marquina",
+      "price": 3590,
+      "hex": "#0f0f12",
+      "image": "/images/materials/nero-marquina.svg"
+    }
+  ]
+}

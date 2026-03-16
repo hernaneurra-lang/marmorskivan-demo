@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>marmorskivan.se bokningskalender</title>
+    <link rel="icon" type="image/png" href="/boka-tid/favicon.png" />
+    <script type="module" crossorigin src="/boka-tid/assets/index-Bl8L7Jfz.js"></script>
+    <link rel="stylesheet" crossorigin href="/boka-tid/assets/index-js3morpP.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Titelrullning -->
+    <script>
+      (function () {
+        const fullTitle = "marmorskivan.se bokningskalender   "; // lite mellanslag i slutet för paus
+        let pos = 0;
+        function scrollTitle() {
+          document.title = fullTitle.substring(pos) + fullTitle.substring(0, pos);
+          pos = (pos + 1) % fullTitle.length;
+        }
+        setInterval(scrollTitle, 250); // hastighet (250ms = lagom)
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,72 @@
+export default {
+  materialsPage: {
+    title: "Material",
+    subtitle: "Välj sten och tjocklek för att fortsätta.",
+    searchPlaceholder: "Sök material… (namn, kategori eller tjocklek)",
+    filterAll: "Alla",
+    showing: "Visar {{count}} material",
+    loading: "Laddar material…",
+    noResults: "Inget material matchade din filtrering.",
+    clickToEnlarge: "Klicka för större bild",
+    thickness: "Tjocklek:",
+    choose: "Välj",
+    chooseTitle: "Välj detta material",
+    moreInfo: "Mer info",
+    moreInfoTitle: "Visa större bild och info",
+    modalTitle: "Mer info",
+    close: "Stäng",
+    closeAria: "Stäng",
+    csvErrorPrefix: "Kunde inte läsa materials.csv:",
+    priceOnRequest: "Pris lämnas vid förfrågan",
+  },
+
+  materials: {
+    links: {
+      title: "Läs mer om materialen",
+      desc: "Upptäck skillnaderna mellan marmor, granit, komposit och andra stensorter.",
+    },
+
+    names: {
+      marble: "Marmor",
+      granite: "Granit",
+      composite: "Komposit",
+      onyx: "Onyx",
+      limestone: "Kalksten",
+      terrazzo: "Terrazzo",
+      quartzite: "Kvartsit",
+      travertine: "Travertin",
+      semiPrecious: "Semi Precious",
+      recycledGlass: "Återvunnet glas",
+    },
+
+    categories: {
+      compositeStone: "Kompositsten",
+      granite: "Granit",
+      ceramic: "Keramik",
+      limestone: "Kalksten",
+      marble: "Marmor",
+      terrazzo: "Terrazzo",
+      quartzite: "Kvartsit",
+      semiPrecious: "Semi Precious",
+      quartziteTranslucent: "Kvartsit (Translucent)",
+      onyx: "Onyx",
+      travertine: "Travertin",
+    },
+  },
+
+  materialsSection: {
+    title: "Valt material",
+    enlargeTitle: "Förstora",
+    priceOnRequest: "Pris lämnas vid förfrågan",
+    priceDisclaimer:
+      "Priset för detta material ingår inte i beräkningen. Du får korrekt pris i offerten.",
+    changeLabel: "Byt material",
+    searchPlaceholder: "Börja skriva (t.ex. calacatta)…",
+    csvErrorPrefix: "Kunde inte läsa materials.csv:",
+    loading: "Laddar…",
+    noHits: "Inga träffar.",
+    pickTitle: "Välj detta material",
+    browseTitle: "Öppna materialsidan",
+    browseAll: "Bläddra alla material",
+  },
+};

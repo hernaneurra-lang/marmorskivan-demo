@@ -1,0 +1,51 @@
+############################################
+# MIME TYPES (Vite / React)
+############################################
+AddType application/javascript .js .mjs
+AddType text/css .css
+AddType application/wasm .wasm
+AddType application/json .json
+AddType application/manifest+json .webmanifest
+
+############################################
+# CACHE CONTROL
+############################################
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType application/wasm "access plus 7 days"
+
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+</IfModule>
+
+############################################
+# API – NO CACHE + CORS
+############################################
+<IfModule mod_headers.c>
+  <FilesMatch "^api/.*\.php$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Headers "Content-Type"
+  </FilesMatch>
+</IfModule>
+
+############################################
+# REACT ROUTER – SPA FALLBACK (VIKTIGASTE)
+############################################
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Servera riktiga filer som vanligt
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 2. ALLT ANNAT → index.html (React tar över)
+  RewriteRule ^ index.html [L]
+</IfModule>

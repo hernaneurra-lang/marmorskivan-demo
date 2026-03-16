@@ -1,0 +1,60 @@
+<?php
+$material = $req['quote']['variant']['name'] ?? '';
+$price    = number_format($req['quote']['totals']['total'] ?? 0, 0, ',', ' ');
+$image    = $req['quote']['variant']['image'] ?? '/products/placeholder.jpg';
+$name     = $req['customer']['name'] ?? '';
+?>
+<div style="font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;padding:20px;">
+  <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e8e8e8;">
+    
+    <!-- Header -->
+    <div style="background:#2e7d32;padding:16px;text-align:center;color:#fff;font-size:22px;font-weight:700;">
+      marmorskivan.se
+    </div>
+
+    <!-- Body -->
+    <div style="padding:20px;">
+      <h2 style="margin:0 0 12px 0;color:#2e7d32;">Tack för din offertförfrågan, <?= htmlspecialchars($name) ?>!</h2>
+      <p style="margin:0 0 14px 0;color:#333;">Vi har tagit emot din förfrågan och återkommer med en offert baserat på din beställning.</p>
+      
+      <!-- Materialinfo -->
+      <div style="display:flex;gap:16px;align-items:center;background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:20px;">
+        <img src="<?= $image ?>" alt="<?= htmlspecialchars($material) ?>" style="width:100px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #ccc;" />
+        <div>
+          <div style="font-size:16px;font-weight:600;color:#111;"><?= htmlspecialchars($material) ?></div>
+          <div style="font-size:14px;color:#666;">Totalt ca <strong><?= $price ?> kr</strong> inkl. moms</div>
+        </div>
+      </div>
+
+      <!-- Steg för steg -->
+      <h3 style="margin:12px 0 8px 0;color:#111;">Så går det till – steg för steg</h3>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:10px;">
+        <tr>
+          <td align="center" style="width:25%;padding:10px;">
+            <img src="https://marmorskivan.se/images/email-icons/measure.png" alt="Mätning" style="width:40px;height:40px;max-width:40px;max-height:40px;object-fit:contain;display:block;margin:0 auto;" />
+            <div style="font-size:12px;color:#333;margin-top:6px;">Mätning</div>
+          </td>
+          <td align="center" style="width:25%;padding:10px;">
+            <img src="https://marmorskivan.se/images/email-icons/quote.png" alt="Offert" style="width:40px;height:40px;max-width:40px;max-height:40px;object-fit:contain;display:block;margin:0 auto;" />
+            <div style="font-size:12px;color:#333;margin-top:6px;">Offert</div>
+          </td>
+          <td align="center" style="width:25%;padding:10px;">
+            <img src="https://marmorskivan.se/images/email-icons/request.png" alt="Produktion" style="width:40px;height:40px;max-width:40px;max-height:40px;object-fit:contain;display:block;margin:0 auto;" />
+            <div style="font-size:12px;color:#333;margin-top:6px;">Produktion</div>
+          </td>
+          <td align="center" style="width:25%;padding:10px;">
+            <img src="https://marmorskivan.se/images/email-icons/install.png" alt="Montering" style="width:40px;height:40px;max-width:40px;max-height:40px;object-fit:contain;display:block;margin:0 auto;" />
+            <div style="font-size:12px;color:#333;margin-top:6px;">Montering</div>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:20px 0 0 0;color:#555;">Har du frågor? Svara direkt på detta mail eller kontakta oss via <a href="https://marmorskivan.se" style="color:#2e7d32;text-decoration:none;">marmorskivan.se</a>.</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#fafafa;color:#666;text-align:center;padding:12px;font-size:12px;border-top:1px solid #eee;">
+      © <?= date('Y') ?> Marmorskivan.se – Alla rättigheter förbehållna
+    </div>
+  </div>
+</div>

@@ -1,0 +1,117 @@
+{
+  "lang": {
+    "sv": "SV",
+    "en": "EN"
+  },
+  "common": {
+    "brand": "marmorskivan.se",
+    "ctaCalculate": "Beräkna & begär offert",
+    "orderNow": "Beställ nu →",
+    "copyright": "marmorskivan.se © 2025"
+  },
+  "nav": {
+    "materials": "Material",
+    "calculator": "Kalkylator"
+  },
+  "app": {
+    "tooltips": {
+      "pickFirst": "Välj material först",
+      "calc": "Kalkylator"
+    },
+    "hero": {
+      "titleMaterials": "Välj material",
+      "titleCalculator": "Kalkylator",
+      "descMaterials": "Filtrera och välj din sten. Pris per m² visas på varje material.",
+      "descCalculator": "Måtta, välj kantbearbetning, stänkskydd samt öppningar & tillval. Priset uppdateras löpande."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Måttbeställ din bänkskiva online",
+      "desc": "Välj material, ange mått och få pris direkt. Offerten skickas till din e-post."
+    },
+    "process": {
+      "title": "Så går det till – steg för steg",
+      "steps": [
+        { "title": "Välj sten", "desc": "Bläddra bland våra material och hitta din favorit." },
+        { "title": "Ange mått & tillval", "desc": "Fyll i mått/värden och lägg till önskade tillval." },
+        { "title": "Offert skickas", "desc": "Vi får din förfrågan och du får en kopia via e-post." },
+        { "title": "Kontakt inom 24 h", "desc": "Vi bokar tid för kostnadsfri mätning." },
+        { "title": "Kostnadsfri mätning", "desc": "Vi kommer ut och mäter just ditt projekt." },
+        { "title": "Fast pris – allt inkluderat", "desc": "Du får en tydlig offert med fast totalpris." },
+        { "title": "Boka montering", "desc": "När stenen är klar bokar vi montering." },
+        { "title": "Montering & 10 års garanti", "desc": "Du får garantiintyg (10 år)." },
+        { "title": "Långsiktig skötsel", "desc": "Vi erbjuder service & försegling." }
+      ]
+    },
+    "trend": {
+      "title": "Populära material just nu",
+      "orderHint": "Beställ denna till ditt kök nu!"
+    },
+    "footer": {
+      "garanti": "10 års garanti",
+      "underhall": "Underhåll",
+      "villkor": "Avtals- & köpvillkor",
+      "integritet": "Integritetspolicy",
+      "hallbarhet": "Hållbarhet"
+    }
+  },
+  "modal": {
+    "garanti": "10 års garanti",
+    "underhall": "Underhåll & skötsel",
+    "villkor": "Avtals- & köpvillkor",
+    "integritet": "Integritetspolicy",
+    "hallbarhet": "Hållbarhet"
+  },
+  "calc": {
+    "kitchenShape": {
+      "title": "Köksform",
+      "islandOnlyHint": "Endast köksö. Ange öns mått nedan."
+    },
+    "shapes": {
+      "straight": "Rakt kök",
+      "straightIsland": "Rakt kök + ö",
+      "l": "L-formade kök",
+      "lIsland": "L-formade kök + ö",
+      "u": "U-formade kök",
+      "uIsland": "U-formade kök + ö",
+      "islandOnly": "Endast köksö"
+    },
+    "island": {
+      "title": "Köksö"
+    },
+    "inputs": {
+      "legA_length": "Ben A längd (L1, mm)",
+      "legA_depth": "Ben A djup (D1, mm)",
+      "legB_length": "Ben B längd (L2, mm)",
+      "legB_depth": "Ben B djup (D2, mm)",
+      "u_depth": "Djup (D, mm)",
+      "u_left": "Vänster ben (L1, mm)",
+      "u_center": "Öppning/bredd (L2, mm)",
+      "u_right": "Höger ben (L3, mm)",
+      "island_length": "Köksö längd (I_L, mm)",
+      "island_depth": "Köksö djup (I_W, mm)",
+      "surface_length": "Längd (mm) – Yta {{index}}",
+      "surface_depth": "Djup (mm) – Yta {{index}}"
+    },
+    "actions": {
+      "removeSurface": "Ta bort yta",
+      "addSurface": "Lägg till yta",
+      "maxSurfaces": "Max 4 ytor."
+    },
+    "priceOverview": {
+      "title": "Prisöversikt",
+      "selectedStone": "Vald sten",
+      "totalArea": "Totalt:",
+      "lines": {
+        "material": "Material (bänk + ev. köksö + extra ytor)",
+        "edges": "Kantbearbetning",
+        "backsplash": "Stänkskydd",
+        "openings": "Öppningar & tillval",
+        "service": "Måttning, montering och frakt"
+      },
+      "vat": "Moms (25%)",
+      "total": "Totalt"
+    }
+  }
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DM83HC54MG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-DM83HC54MG', {
+        send_page_view: true
+      });
+    </script>
+
+    <!-- ✅ FAVICON - uppdaterade sökvägar -->
+    <link rel="icon" href="/images/favicon/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/images/favicon/icon-192.png" sizes="192x192" />
+    <link rel="icon" type="image/png" href="/images/favicon/icon-512.png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/images/favicon/icon-192.png" />
+    
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#047857" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+
+    <title>marmorskivan.se – Bänkskivor i sten</title>
+    <meta
+      name="description"
+      content="Måttbeställda bänkskivor i granit, marmor, kvartskomposit och keramik. marmorskivan.se – egna montörer i Mälardalen."
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="sv_SE" />
+    <meta property="og:title" content="marmorskivan.se – Bänkskivor i sten" />
+    <meta
+      property="og:description"
+      content="Premium bänkskivor i granit, marmor, kvartskomposit & keramik. Egna montörer i Mälardalen – få offert direkt online."
+    />
+    <meta property="og:url" content="https://marmorskivan.se/" />
+    <meta
+      property="og:image"
+      content="https://marmorskivan.se/hero/stone-kitchen.jpg"
+    />
+    <meta property="og:site_name" content="marmorskivan.se" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="marmorskivan.se – Bänkskivor i sten" />
+    <meta
+      name="twitter:description"
+      content="Premium bänkskivor i granit, marmor, kvartskomposit & keramik. Egna montörer i Mälardalen – få offert direkt online."
+    />
+    <meta
+      name="twitter:image"
+      content="https://marmorskivan.se/hero/stone-kitchen.jpg"
+    />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      .font-playfair {
+        font-family: "Playfair Display", serif;
+      }
+      @supports (-webkit-overflow-scrolling: touch) {
+        .ios-no-fixed {
+          background-attachment: scroll !important;
+        }
+        input, select, textarea {
+          font-size: 16px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="antialiased bg-gray-50">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Marmorerad bakgrund: mörkgrå gradient -->
+    <radialGradient id="bg" cx="30%" cy="30%" r="100%">
+      <stop offset="0%" stop-color="#2b2b2b"/>
+      <stop offset="100%" stop-color="#111"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
+  <text x="50%" y="55%" text-anchor="middle" fill="white"
+        font-size="280" font-family="Playfair Display, serif"
+        dy=".35em">M</text>
+</svg>

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "none",
+    "brand": "—",
+    "name": "Ingen produkt (jag har egen)",
+    "price": 0,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-andano-700-u",
+    "brand": "Blanco",
+    "name": "Blanco Andano 700 U",
+    "price": 17,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-andano-700-if",
+    "brand": "Blanco",
+    "name": "Blanco Andano 700 IF",
+    "price": 20,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-andano-500-180-u",
+    "brand": "Blanco",
+    "name": "Blanco Andano 500/180 U",
+    "price": 21,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-andano-500-u",
+    "brand": "Blanco",
+    "name": "Blanco Andano 500 U",
+    "price": 13,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-andano-500-if",
+    "brand": "Blanco",
+    "name": "Blanco Andano 500 IF",
+    "price": 15,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-claron-700-u",
+    "brand": "Blanco",
+    "name": "Blanco Claron 700 U",
+    "price": 20,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-claron-700-if",
+    "brand": "Blanco",
+    "name": "Blanco Claron 700 IF",
+    "price": 26,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-subline-500-u",
+    "brand": "Blanco",
+    "name": "Blanco Subline 500 U",
+    "price": 14,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "blanco-zerox-450-if",
+    "brand": "Blanco",
+    "name": "Blanco Zerox 450 IF",
+    "price": 18,
+    "img": "/products/placeholder.jpg"
+  }
+]

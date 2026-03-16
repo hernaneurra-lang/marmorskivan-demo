@@ -1,0 +1,30 @@
+[
+  {
+    "id": "none",
+    "brand": "—",
+    "name": "Ingen häll vald (jag har egen)",
+    "price": 0,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "missing-id",
+    "brand": "—",
+    "name": "",
+    "price": 0,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "missing-id",
+    "brand": "Siemens",
+    "name": "",
+    "price": 0,
+    "img": "/products/placeholder.jpg"
+  },
+  {
+    "id": "missing-id",
+    "brand": "Bosch",
+    "name": "",
+    "price": 0,
+    "img": "/products/placeholder.jpg"
+  }
+]

@@ -1,0 +1,117 @@
+{
+  "lang": {
+    "sv": "SV",
+    "en": "EN"
+  },
+  "common": {
+    "brand": "marmorskivan.se",
+    "ctaCalculate": "Calculate & request quote",
+    "orderNow": "Order now →",
+    "copyright": "marmorskivan.se © 2025"
+  },
+  "nav": {
+    "materials": "Materials",
+    "calculator": "Calculator"
+  },
+  "app": {
+    "tooltips": {
+      "pickFirst": "Pick a material first",
+      "calc": "Calculator"
+    },
+    "hero": {
+      "titleMaterials": "Choose material",
+      "titleCalculator": "Calculator",
+      "descMaterials": "Filter and choose your stone. Price per m² is shown on each material.",
+      "descCalculator": "Enter measurements, choose edge profile, backsplash and cutouts/extras. Price updates live."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Order your countertop online",
+      "desc": "Choose material, enter dimensions and get instant pricing. The quote is sent by email."
+    },
+    "process": {
+      "title": "How it works – step by step",
+      "steps": [
+        { "title": "Choose stone", "desc": "Browse our materials and pick your favourite." },
+        { "title": "Enter sizes & options", "desc": "Fill in measurements and add your options." },
+        { "title": "Quote is sent", "desc": "We receive your request and you get a copy by email." },
+        { "title": "Contact within 24h", "desc": "We schedule a free on-site measurement." },
+        { "title": "Free measurement", "desc": "We visit and measure your project." },
+        { "title": "Fixed price – all included", "desc": "You get a clear quote with a fixed total price." },
+        { "title": "Book installation", "desc": "When the stone is ready, we book installation." },
+        { "title": "Installation & 10-year warranty", "desc": "You receive a warranty certificate (10 years)." },
+        { "title": "Long-term care", "desc": "We offer service & sealing." }
+      ]
+    },
+    "trend": {
+      "title": "Popular materials right now",
+      "orderHint": "Order this for your kitchen now!"
+    },
+    "footer": {
+      "garanti": "10-year warranty",
+      "underhall": "Care",
+      "villkor": "Terms & conditions",
+      "integritet": "Privacy policy",
+      "hallbarhet": "Sustainability"
+    }
+  },
+  "modal": {
+    "garanti": "10-year warranty",
+    "underhall": "Care & maintenance",
+    "villkor": "Terms & conditions",
+    "integritet": "Privacy policy",
+    "hallbarhet": "Sustainability"
+  },
+  "calc": {
+    "kitchenShape": {
+      "title": "Kitchen layout",
+      "islandOnlyHint": "Island only. Enter the island dimensions below."
+    },
+    "shapes": {
+      "straight": "Straight kitchen",
+      "straightIsland": "Straight kitchen + island",
+      "l": "L-shaped kitchen",
+      "lIsland": "L-shaped kitchen + island",
+      "u": "U-shaped kitchen",
+      "uIsland": "U-shaped kitchen + island",
+      "islandOnly": "Island only"
+    },
+    "island": {
+      "title": "Kitchen island"
+    },
+    "inputs": {
+      "legA_length": "Leg A length (L1, mm)",
+      "legA_depth": "Leg A depth (D1, mm)",
+      "legB_length": "Leg B length (L2, mm)",
+      "legB_depth": "Leg B depth (D2, mm)",
+      "u_depth": "Depth (D, mm)",
+      "u_left": "Left leg (L1, mm)",
+      "u_center": "Opening/width (L2, mm)",
+      "u_right": "Right leg (L3, mm)",
+      "island_length": "Island length (I_L, mm)",
+      "island_depth": "Island depth (I_W, mm)",
+      "surface_length": "Length (mm) – Surface {{index}}",
+      "surface_depth": "Depth (mm) – Surface {{index}}"
+    },
+    "actions": {
+      "removeSurface": "Remove surface",
+      "addSurface": "Add surface",
+      "maxSurfaces": "Max 4 surfaces."
+    },
+    "priceOverview": {
+      "title": "Price summary",
+      "selectedStone": "Selected stone",
+      "totalArea": "Total:",
+      "lines": {
+        "material": "Material (countertop + optional island + extra surfaces)",
+        "edges": "Edge finishing",
+        "backsplash": "Backsplash",
+        "openings": "Cutouts & extras",
+        "service": "Measurement, installation and delivery"
+      },
+      "vat": "VAT (25%)",
+      "total": "Total"
+    }
+  }
+}

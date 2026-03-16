@@ -1,0 +1,31 @@
+[
+  {
+    "brand": "—",
+    "title": "Ingen häll vald (jag har egen)",
+    "specs": {}
+  },
+  {
+    "slug": "Siemens_IQ500_80",
+    "brand": "Siemens",
+    "title": "Siemens ED811HQ26E iQ500 – Spishäll med inbyggd köksfläkt",
+    "image":"Siemens_IQ500_80.jpg",
+    "specs": {
+      "Mått": "223 x 802 x 522 mm",
+      "Material": "Spishäll med inbyggd köksfläkt",
+      "Filtrera": "Spishäll från Siemens",
+      "Pris från": "34500kr"
+    }
+  },
+  {
+    "slug": "Bosch_Serie_8",
+    "brand": "Bosch",
+    "title": "Bosch PXE601DC1E Serie 8, Induktionshäll",
+    "image":"Bosch_Serie_8.jpg",
+    "specs": {
+      "Mått": "56 x 572 x 512 mm",
+      "Material": "Spishäll med inbyggd köksfläkt",
+      "Filtrera": "Spishäll från Bosch",
+      "Pris från": "19500kr"
+    }
+  }
+]

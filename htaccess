@@ -1,0 +1,105 @@
+# ============================================
+# .htaccess för Marmorskivan.se (React SPA på Loopia)
+# ============================================
+
+# Aktivera RewriteEngine
+RewriteEngine On
+
+# ============================================
+# 1. TVINGA HTTPS (om du har SSL-certifikat)
+# ============================================
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ============================================
+# 2. TA BORT TRAILING SLASH (förutom för mappar)
+# Detta fixar /app/ -> /app problemet
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} (.+)/$
+RewriteRule ^ %1 [R=301,L]
+
+# ============================================
+# 3. TA BORT www (valfritt - för konsekvent URL)
+# Ändra till "lägg till www" om du föredrar det
+# ============================================
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# ============================================
+# 4. SPA ROUTING - Skicka alla requests till index.html
+# Detta är KRITISKT för att React Router ska fungera
+# ============================================
+
+# Om filen eller mappen finns fysiskt, servera den direkt
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Annars, skicka till index.html (React tar över routing)
+RewriteRule ^ /index.html [QSA,L]
+
+# ============================================
+# 5. CACHE-KONTROLL för statiska filer
+# ============================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Bilder - cache i 1 år
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    
+    # CSS och JS - cache i 1 år (versioneras av Vite)
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    
+    # Fonter - cache i 1 år
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    
+    # HTML - ingen cache (alltid hämta senaste)
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# ============================================
+# 6. GZIP-KOMPRIMERING
+# ============================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ============================================
+# 7. SÄKERHETS-HEADERS
+# ============================================
+<IfModule mod_headers.c>
+    # Förhindra clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # Förhindra MIME-sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # XSS-skydd
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# ============================================
+# 8. FÖRHINDRA DIRECTORY LISTING
+# ============================================
+Options -Indexes
+
+# ============================================
+# 9. KORREKT MIME-TYPER
+# ============================================
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType image/svg+xml .svg
+    AddType font/woff2 .woff2
+    AddType font/woff .woff
+</IfModule>
