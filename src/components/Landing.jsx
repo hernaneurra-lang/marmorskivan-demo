@@ -196,22 +196,32 @@ export default function Landing() {
             {t("common.brand", { defaultValue: "marmorskivan.se" })}
           </a>
 
-          <div className="flex items-center gap-2 text-sm font-semibold">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              className={uiLang === "sv" ? "underline" : ""}
-              onClick={() => setLang("sv")}
+              onClick={goToApp}
+              style={{ backgroundColor: siteSettings.accent_color || "#059669" }}
+              className="hidden sm:inline-flex px-4 py-2 rounded-xl text-white text-sm font-semibold shadow hover:opacity-90 transition-all"
             >
-              {t("lang.sv", { defaultValue: "SV" })}
+              {siteSettings.nav_cta_text || t("common.ctaCalculate", { defaultValue: "Begär offert" })}
             </button>
-            <span aria-hidden="true">|</span>
-            <button
-              type="button"
-              className={uiLang === "en" ? "underline" : ""}
-              onClick={() => setLang("en")}
-            >
-              {t("lang.en", { defaultValue: "EN" })}
-            </button>
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <button
+                type="button"
+                className={uiLang === "sv" ? "underline" : ""}
+                onClick={() => setLang("sv")}
+              >
+                {t("lang.sv", { defaultValue: "SV" })}
+              </button>
+              <span aria-hidden="true">|</span>
+              <button
+                type="button"
+                className={uiLang === "en" ? "underline" : ""}
+                onClick={() => setLang("en")}
+              >
+                {t("lang.en", { defaultValue: "EN" })}
+              </button>
+            </div>
           </div>
         </div>
       </header>

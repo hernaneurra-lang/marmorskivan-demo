@@ -399,7 +399,7 @@ function resetFormCompletely() {
                 className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
                   shape === s
                     ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-emerald-300"
+                    : "bg-white border-gray-300 text-gray-800 hover:border-emerald-400 hover:text-emerald-700"
                 }`}
               >
                 {shapeLabel(s)}
@@ -536,25 +536,30 @@ function resetFormCompletely() {
         <div className="rounded-2xl border p-5 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-xs font-bold uppercase tracking-widest text-gray-600">
+              <div className="text-xs font-bold uppercase tracking-widest text-gray-700">
                 {t("calc.thickness.title", "Tjocklek")}
               </div>
-              <div className="text-sm font-semibold text-gray-900">
+              <div className="text-sm font-semibold text-gray-800">
                 {t("calc.thickness.subtitle", "Välj tjocklek för vald sten")}
               </div>
             </div>
 
-            <select
-              className="text-xs border rounded-lg px-2 py-1.5 bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500/20"
-              value={thicknessMm}
-              onChange={(e) => onThicknessChange?.(e.target.value)}
-            >
+            <div className="flex gap-2">
               {availableThicknesses.map((th) => (
-                <option key={th} value={th}>
+                <button
+                  key={th}
+                  type="button"
+                  onClick={() => onThicknessChange?.(String(th))}
+                  className={`px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                    String(thicknessMm) === String(th)
+                      ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
+                      : "bg-white border-gray-300 text-gray-800 hover:border-emerald-400 hover:text-emerald-700"
+                  }`}
+                >
                   {th} mm
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </div>
 
@@ -566,19 +571,19 @@ function resetFormCompletely() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-[11px] border-b pb-6">
             <div className="space-y-4">
               <div>
-                <p className="font-bold uppercase text-gray-600 mb-1 tracking-widest">
+                <p className="font-bold uppercase text-gray-700 mb-1 tracking-widest">
                   {t("calc.priceOverview.blocks.stone", "Sten & Yta")}
                 </p>
                 <p className="text-gray-900 font-semibold">
                   {String(variant?.name || "").replace(/_/g, " ")}
                 </p>
-                <p className="text-gray-500">
+                <p className="text-gray-600">
                   {thicknessMm}mm • {number2(totalStoneM2)} m²
                 </p>
               </div>
 
               <div>
-                <p className="font-bold uppercase text-gray-600 mb-1 tracking-widest">
+                <p className="font-bold uppercase text-gray-700 mb-1 tracking-widest">
                   {t("calc.priceOverview.blocks.execution", "Utförande")}
                 </p>
                 <p className="text-gray-900">{shapeLabel(shape)}</p>
@@ -624,7 +629,7 @@ function resetFormCompletely() {
               </div>
 
               <div>
-                <p className="font-bold uppercase text-gray-600 mb-1 tracking-widest">
+                <p className="font-bold uppercase text-gray-700 mb-1 tracking-widest">
                   {t("calc.priceOverview.blocks.processing", "Bearbetning")}
                 </p>
                 <p className="text-gray-700">
@@ -739,11 +744,11 @@ function resetFormCompletely() {
 /* --- HJÄLPARE --- */
 function NumberInput({ label, value, onChange }) {
   return (
-    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest flex flex-col">
+    <label className="text-[11px] font-bold text-gray-700 uppercase tracking-widest flex flex-col">
       {label}
       <input
         type="number"
-        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 outline-none transition-all"
+        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 font-semibold focus:border-emerald-500 outline-none transition-all"
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
       />

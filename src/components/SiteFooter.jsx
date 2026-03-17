@@ -1,6 +1,7 @@
 // Path: src/components/SiteFooter.jsx
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSettings } from "../context/SettingsContext.jsx";
 import {
   FaInstagram,
   FaFacebookF,
@@ -47,7 +48,18 @@ const SOCIALS = {
 
 export default function SiteFooter() {
   const { t } = useTranslation();
+  const settings = useSettings();
   const [footerModal, setFooterModal] = useState(null);
+
+  const company   = settings.footer_company  || "";
+  const tagline   = settings.footer_tagline  || "";
+  const orgnr     = settings.footer_orgnr    || "";
+  const phone     = settings.contact_phone   || "";
+  const email     = settings.contact_email   || "";
+  const address   = settings.contact_address || "";
+  const hours     = settings.contact_hours   || "";
+
+  const hasContactInfo = phone || email || address || hours;
 
   return (
     <>
@@ -57,10 +69,26 @@ export default function SiteFooter() {
       >
         <div className="absolute inset-0 bg-white/85 backdrop-blur" />
 
+        {/* Contact/company info bar */}
+        {hasContactInfo && (
+          <div className="relative border-b border-gray-200/60">
+            <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap gap-4 justify-center md:justify-between items-center text-sm text-gray-600">
+              {company && <span className="font-semibold text-gray-800">{company}{tagline ? ` — ${tagline}` : ""}</span>}
+              {phone   && <a href={`tel:${phone}`}   className="hover:text-black">📞 {phone}</a>}
+              {email   && <a href={`mailto:${email}`} className="hover:text-black">✉️ {email}</a>}
+              {address && <span>📍 {address}</span>}
+              {hours   && <span>🕐 {hours}</span>}
+            </div>
+          </div>
+        )}
+
         <div className="relative max-w-6xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
           {/* LEFT */}
           <div className="text-sm text-gray-600 text-center md:text-left">
-            {t("common.copyright")}
+            {company
+              ? <>{company}{orgnr ? <span className="ml-2 text-gray-400">Org.nr {orgnr}</span> : null}</>
+              : t("common.copyright")
+            }
           </div>
 
           {/* CENTER – SOCIAL ICONS */}

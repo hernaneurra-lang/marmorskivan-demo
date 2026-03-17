@@ -164,11 +164,70 @@ export async function migrate() {
 
   // Seed default knowledge base entries
   const kbDefaults = [
-    ["Vad kostar en bänkskiva?", "Priser varierar beroende på material: Kvartskomposit 1 500–3 000 kr/m², Granit 2 000–4 000 kr/m², Marmor 2 500–5 000 kr/m². Använd kalkylatorn för exakt pris."],
-    ["Hur lång är leveranstiden?", "Normalt 2–6 veckor beroende på material och om montering ingår. Standardmaterial levereras snabbare."],
-    ["Erbjuder ni mätning?", "Ja, vi erbjuder professionell mätning på plats i Storstockholm. Kontakta oss för bokning."],
-    ["Vilket material är bäst för kök?", "Kvartskomposit är populärt för kök — det är härdigt, lättskött och repbeständigt. Granit är naturligt vackert men kräver ibland impregnering."],
-    ["Hur sköter man om marmor?", "Marmor är poröst och känsligt för syra. Torka upp spill direkt, undvik citrus och vinäger. Impregnera 1–2 gånger om året."],
+    // Priser & kalkylator
+    ["Vad kostar en bänkskiva?", "Priser varierar beroende på material: Kvartskomposit 1 500–3 000 kr/m², Granit 2 000–4 000 kr/m², Marmor 2 500–5 000 kr/m², Keramik/Dekton 3 000–6 000 kr/m². I priset ingår normalt tillskärning, kantpolering och montage. Använd kalkylatorn på /app för exakt pris på dina mått."],
+    ["Hur räknar ni ut priset?", "Priset baseras på stenens yta i m² × materialpris, plus bearbetningskostnader för urtag (diskho, häll, kranhål) och kantpolering. Montering och mätning tillkommer. Kalkylatorn på /app ger ett direkt estimat."],
+    ["Ingår montering i priset?", "Ja, vår kalkylator inkluderar ett paketpris med sten + mätning + montage för standardjobb i Storstockholm. Exakt offert skickas efter mätningsbesök."],
+
+    // Leverans & ledtid
+    ["Hur lång är leveranstiden?", "Normalt 2–4 veckor för standardmaterial, 4–8 veckor för ovanliga eller importerade material. Vi meddelar exakt datum när du beställer. Vi levererar och monterar i Storstockholm."],
+    ["Levererar ni i hela Sverige?", "Vi levererar och monterar primärt i Storstockholm. Kontakta oss för förfrågan om andra orter — vi kan hänvisa till samarbetspartners."],
+    ["Kan jag spåra min beställning?", "När din beställning är bekräftad och mätning gjord håller vi dig uppdaterad via e-post. Du kan alltid höra av dig på info@marmorskivan.se med ditt ordernummer."],
+
+    // Mätning & montage
+    ["Erbjuder ni mätning?", "Ja, vi erbjuder professionell mätning på plats i Storstockholm. Mätaren tar exakta mått, noterar urtag och säkerställer att stenplattan passar perfekt. Boka via vår offertförfrågan eller ring oss."],
+    ["Hur fungerar installationsprocessen?", "1. Du beräknar och skickar offertförfrågan via kalkylatorn. 2. Vi bekräftar och bokar mätningsbesök. 3. Vi tillverkar stenskivan efter exakta mått. 4. Vi levererar och monterar på plats. 5. Du godkänner resultatet."],
+    ["Kan jag mäta själv?", "Du kan använda kalkylatorn för en prisuppskattning med egna mått. För beställning rekommenderar vi alltid ett professionellt mätbesök för att garantera passform."],
+
+    // Material – Kvartskomposit
+    ["Vad är kvartskomposit?", "Kvartskomposit (Silestone, Caesarstone etc.) är ett tillverkat material av ca 93% kvartsit + bindemedel. Det är mycket hårt, repbeständigt, lågporöst och lättskött. Behöver sällan impregneras. Perfekt för aktiva kök."],
+    ["Vilket material är bäst för kök?", "Kvartskomposit är det populäraste valet för kök — hårt, repbeständigt och lättsköt. Granit är ett naturligt alternativ med unik ådring. Keramik/Dekton är extremt tåligt mot värme och repor. Marmor är vackrast men känsligast."],
+    ["Är kvartskomposit tåligt mot värme?", "Kvartskomposit tål kortvarig värme men undvik att sätta heta kastruller direkt på ytan — det kan orsaka termisk spänning. Använd alltid grytunderlägg."],
+
+    // Material – Marmor
+    ["Hur sköter man om marmor?", "Marmor är poröst och syrakänsligt. Undvik citron, vinäger och vin. Torka upp spill direkt. Använd pH-neutralt rengöringsmedel. Impregnera ytan 1–2 gånger per år. Undvik slipmedel och stålull."],
+    ["Är marmor lämpligt i kök?", "Marmor är vackert men kräver mer skötsel i kök. Det är känsligt för syra (etsning) och fläckar. Väljer du marmor i köket rekommenderar vi impregnering och försiktighet. I badrum och low-traffic-ytor fungerar det utmärkt."],
+    ["Vad kostar marmor?", "Marmor kostar normalt 2 500–5 000 kr/m² beroende på sort och ursprung. Italiensk Carrara-marmor är populär och prisvärd. Exotiska sorter kan kosta mer."],
+
+    // Material – Granit
+    ["Hur sköter man om granit?", "Granit är ett av de hårdaste naturstenarterna. Tåler värme och repor väl. Täta ytan 1–2 gånger per år med stenimp regnering. Torka upp spill, speciellt olja och vin, snabbt. Rengör med milt diskmedel och vatten."],
+    ["Är granit poröst?", "Granit har viss porositet beroende på sort, men avsevärt lägre än marmor. Impregnera vid installation och 1–2 ggr/år för bästa skydd mot fläckar."],
+
+    // Material – Keramik / Dekton
+    ["Vad är keramik/Dekton?", "Keramik (inklusive Dekton, Porcelanico) är ett extremt hårt, lågporöst material. Det är mycket tåligt mot värme, repor och UV-ljus. Passar utmärkt för utomhuskök. Nackdelen är att det är sprött mot hårda slag mot kanter."],
+    ["Hur sköter man om keramik?", "Keramik är mycket lättsköt. Rengör med milt diskmedel och vatten. Tål värme och repor. Undvik hårda slag mot kanter då det kan flisa sig. Behöver inte impregneras."],
+
+    // Material – Kvartsit
+    ["Vad är kvartsit?", "Kvartsit är en natursten med utseende som liknar marmor men är hårdare och mer tålig. Populärt för dem som vill ha marmorns estetik med graniets hållfasthet. Impregneras 1–2 ggr/år."],
+
+    // Tjocklek & tjockleksval
+    ["Vilken tjocklek ska jag välja på bänkskivan?", "Standard är 20 mm och 30 mm. 20 mm passar de flesta kök och är prisvärt. 30 mm ger ett mer massivt, lyxigt intryck och är stabilare för större urtag. Välj 30 mm för köksöar eller om du vill ha ett premium-utseende."],
+    ["Vad är skillnaden mellan 20 mm och 30 mm?", "20 mm är lättare och billigare. 30 mm ger ett tjockare, mer massivt utseende och extra stabilitet vid urtag för diskho och häll. Många väljer 30 mm för köksöar."],
+
+    // Urtag & tillval
+    ["Ingår urtag för diskho i priset?", "Urtag för diskho ingår i kalkylatorn — välj antal och monteringssätt (överlimmat/underlimmat). Priset justeras automatiskt i offerten."],
+    ["Vad är skillnaden på överlimmat och underlimmat?", "Överlimmat (over-mount): kanten syns på ytan, enklare och billigare. Underlimmat (under-mount): ingen synlig kant, renare utseende men lite dyrare. Underlimmat är standard för premium-kök."],
+    ["Kan ni göra urtag för induktionshäll?", "Ja, vi tillverkar urtag för alla typer av hällar — induktion, gas och elektrisk. Ange antal och monteringstyp i kalkylatorn."],
+
+    // Kantbehandling
+    ["Vilka kantalternativ finns?", "Vi erbjuder fasad (45°-fas), halvrund, rakt polerad och profilkant. Fasad är standard och ingår. Profilkanter kan tillkomma i pris. Ange önskad kant i offertförfrågan."],
+    ["Vad innebär kantpolering?", "Kantpolering innebär att stenens kanter slipas och poleras för ett fint, hållbart avslut. Ingår normalt för alla synliga kanter i priset."],
+
+    // Garanti
+    ["Vad gäller er garanti?", "Vi erbjuder 10 års garanti på montering och montagearbete. Garantin täcker: rätt passform mot väggar och skåp, planlimning och underlimning utförd enligt anvisningar, samt återbesök för justering om monteringen orsakat avvikelse."],
+    ["Vad täcker inte garantin?", "Garantin täcker inte: naturliga variationer i sten (ådring, porer, färgskiftningar), skador efter montering (värmechock, slag, fel kemikalier), eller problem p.g.a. felaktig underliggande stomme som vi inte installerat."],
+    ["Hur gör jag ett garantiärende?", "Maila info@marmorskivan.se med ordernummer, bilder och beskrivning. Vi gör en bedömning och bokar ev. hembesök. Åtgärd utförs utan kostnad om ärendet täcks av garantin."],
+
+    // Hållbarhet
+    ["Är stenens miljövänligt?", "Natursten är ett hållbart val med lång livslängd. Vi prioriterar leverantörer med ansvarsfullt stenbrott. Kvartskomposit tillverkas på fabrik men har lång livslängd som minskar totalpåverkan. Keramik är energiintensivt att tillverka men extremt hållbart."],
+
+    // Betalning & offert
+    ["Hur fungerar offertprocessen?", "1. Beräkna via kalkylatorn och skicka offertförfrågan. 2. Vi återkommer inom 24 timmar med bekräftelse. 3. Vi bokar mätning. 4. Efter mätning skickas slutgiltig offert. 5. Vid godkännande startar produktion."],
+    ["Kan jag ändra min beställning efter offert?", "Kontakta oss snarast möjligt vid önskade ändringar. Mindre justeringar kan göras fram till produktionsstart. Stora ändringar kan påverka pris och ledtid."],
+
+    // Kontakt
+    ["Hur kontaktar jag er?", "Mejla info@marmorskivan.se, chatta med oss här direkt, eller ring oss under kontorstid Mån–Fre 8–17. Vi svarar normalt inom ett par timmar på vardagar."],
+    ["Har ni visningslokal?", "Kontakta oss för att boka visning av material och prover. Vi kan också skicka materialprover hem till dig vid förfrågan."],
   ];
   for (const [question, answer] of kbDefaults) {
     await db.query(

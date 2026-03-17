@@ -1,5 +1,10 @@
 // src/admin/AnalyticsView.jsx — Enhanced analytics with period filter, funnel, visual charts
 import { useState, useEffect, useCallback } from "react";
+import {
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
 
 function StatCard({ icon, value, label, color }) {
   return (
@@ -139,40 +144,56 @@ export default function AnalyticsView({ headers, apiBase }) {
               </div>
             </div>
 
-            {/* Daily chart */}
+            {/* Daily chats line chart */}
             <div className="admin-card">
               <div className="admin-card-title">📅 Chattsessioner per dag</div>
               {data?.dailyChats?.length ? (
-                <div className="bar-chart">
-                  {(() => {
-                    const max = Math.max(...data.dailyChats.map((d) => Number(d.sessions)), 1);
-                    return [...data.dailyChats].reverse().map((d) => (
-                      <div key={d.day} className="bar-col">
-                        <div
-                          className="bar-col-bar"
-                          style={{ height: `${Math.round(Number(d.sessions) / max * 100)}%` }}
-                          title={`${d.sessions} chattar`}
-                        />
-                        <div className="bar-col-label">
-                          {new Date(d.day).toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" })}
-                        </div>
-                      </div>
-                    ));
-                  })()}
-                </div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={[...data.dailyChats].reverse()} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 10, fill: "var(--muted)" }}
+                      tickFormatter={(v) => new Date(v).toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" })}
+                    />
+                    <YAxis tick={{ fontSize: 10, fill: "var(--muted)" }} allowDecimals={false} />
+                    <Tooltip
+                      formatter={(v) => [v, "Chattar"]}
+                      labelFormatter={(v) => new Date(v).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short" })}
+                    />
+                    <Line type="monotone" dataKey="sessions" stroke="var(--green)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
               ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data ännu</div>}
             </div>
 
-            {/* Events + Questions */}
+            {/* Events pie chart + Questions */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <div className="admin-card">
                 <div className="admin-card-title">⚡ Händelsetyper</div>
                 {data?.topEvents?.length ? (
-                  <BarList
-                    items={data.topEvents}
-                    labelKey="event"
-                    valueKey="count"
-                  />
+                  <>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie
+                          data={data.topEvents.slice(0, 6)}
+                          dataKey="count"
+                          nameKey="event"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={65}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          labelLine={false}
+                        >
+                          {data.topEvents.slice(0, 6).map((_, i) => (
+                            <Cell key={i} fill={["#3b82f6","#8b5cf6","#f59e0b","#10b981","#ef4444","#6366f1"][i % 6]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v, n) => [v, n]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <BarList items={data.topEvents} labelKey="event" valueKey="count" />
+                  </>
                 ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data</div>}
               </div>
 
