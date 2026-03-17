@@ -62,8 +62,35 @@ export async function migrate() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id);
     CREATE INDEX IF NOT EXISTS analytics_events_created_idx ON analytics_events(created_at);
   `);
+
+  // Seed default settings if not present
+  const defaults = [
+    ["hero_title",      "Måttbeställ din bänkskiva online"],
+    ["hero_subtitle",   "Välj material, ange mått och få pris direkt. Offerten skickas till din e-post."],
+    ["hero_cta",        "Beräkna & begär offert"],
+    ["accent_color",    "#059669"],
+    ["heading_color",   "#111827"],
+    ["body_color",      "#374151"],
+    ["logo_size",       "normal"],
+    ["hero_brightness", "100"],
+    ["deal_text",       "Veckans deal: Diskho från Intra ingår vid beställning av stenskiva."],
+    ["deal_visible",    "true"],
+  ];
+  for (const [key, value] of defaults) {
+    await db.query(
+      `INSERT INTO site_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
+      [key, value]
+    );
+  }
+
   console.log("✅ DB migrated");
 }

@@ -53,7 +53,7 @@ export default function ProcessSteps() {
     <section id="process" className="relative z-10 bg-white/85 backdrop-blur border-t">
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="flex items-baseline justify-between mb-6">
-          <h2 className="text-xl font-semibold">Så går det till – steg för steg</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Så går det till – steg för steg</h2>
           <span className="text-sm text-gray-500">En smidig resa från val till färdig montering</span>
         </div>
 
@@ -84,7 +84,7 @@ function StepCard({ index, title, desc, Icon }) {
         </span>
       </div>
       <div className="min-w-0">
-        <h3 className="font-medium leading-snug">{title}</h3>
+        <h3 className="font-medium leading-snug text-gray-900">{title}</h3>
         <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{desc}</p>
       </div>
     </article>

@@ -6,6 +6,7 @@ import { heroTiles } from "../config/site";
 import Modal from "./modal";
 import MaterialLinks from "./MaterialLinks";
 import SiteFooter from "./SiteFooter";
+import { useSettings } from "../context/SettingsContext.jsx";
 
 /* -------------------------------------------------------
    DYNAMISK VECKO-LOGIK (Fokus på Gattoni & Intra med i18n)
@@ -134,6 +135,7 @@ export default function Landing() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [lightbox, setLightbox] = useState(null);
+  const siteSettings = useSettings();
 
   const tiles = useMemo(() => heroTiles.slice(0, 4), []);
   const uiLang = (i18n.language || "sv").slice(0, 2);
@@ -217,23 +219,28 @@ export default function Landing() {
       <section className="relative z-10 min-h-[50vh] flex items-center justify-center text-center px-6 py-20 md:py-28">
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-            {t("landing.hero.title")}
+            {siteSettings.hero_title || t("landing.hero.title")}
           </h1>
-          <p className="mt-4 text-lg text-gray-700">{t("landing.hero.desc")}</p>
+          <p className="mt-4 text-lg text-gray-700">
+            {siteSettings.hero_subtitle || t("landing.hero.desc")}
+          </p>
           <button
             type="button"
             onClick={goToApp}
-            className="mt-8 px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 shadow transition-all active:scale-95"
+            style={{ backgroundColor: siteSettings.accent_color }}
+            className="mt-8 px-6 py-3 rounded-xl text-white font-semibold shadow transition-all active:scale-95 hover:opacity-90"
           >
-            {t("common.ctaCalculate")}
+            {siteSettings.hero_cta || t("common.ctaCalculate")}
           </button>
 
-          {/* DYNAMISK TEXT UNDER KNAPPEN - Nu med i18n-stöd */}
-          <div className="mt-6 animate-soft-pulse">
-             <p className="text-emerald-800 font-medium text-sm md:text-base bg-emerald-50/60 py-1.5 px-5 rounded-full inline-block border border-emerald-100 shadow-sm">
-               ✨ {weeklyMessage}
-             </p>
-          </div>
+          {/* Deal-banner */}
+          {siteSettings.deal_visible !== "false" && (
+            <div className="mt-6 animate-soft-pulse">
+              <p className="text-emerald-800 font-medium text-sm md:text-base bg-emerald-50/60 py-1.5 px-5 rounded-full inline-block border border-emerald-100 shadow-sm">
+                ✨ {siteSettings.deal_text || weeklyMessage}
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

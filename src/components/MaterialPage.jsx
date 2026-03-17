@@ -881,7 +881,7 @@ function MaterialGroupCard({ group, imagesMap, onPick, onOpenInfo, currency }) {
 
       <div className="p-4 flex-1 flex flex-col gap-2">
         <div className="text-xs text-gray-500">{categoryLabel}</div>
-        <h3 className="font-semibold">{baseName}</h3>
+        <h3 className="font-semibold text-gray-900">{baseName}</h3>
 
         <label className="text-sm">
           <span className="text-gray-600">

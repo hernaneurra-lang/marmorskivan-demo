@@ -4,6 +4,7 @@ import "./admin.css";
 import SessionsView from "./SessionsView.jsx";
 import AnalyticsView from "./AnalyticsView.jsx";
 import ContactsView from "./ContactsView.jsx";
+import SettingsView from "./SettingsView.jsx";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 const TOKEN_KEY = "ms_admin_token";
@@ -61,9 +62,10 @@ function Login({ onLogin }) {
 }
 
 const NAV = [
-  { key: "sessions", icon: "💬", label: "Chattar" },
-  { key: "contacts", icon: "📞", label: "Kontakter" },
+  { key: "sessions",  icon: "💬", label: "Chattar" },
+  { key: "contacts",  icon: "📞", label: "Kontakter" },
   { key: "analytics", icon: "📊", label: "Analytics" },
+  { key: "settings",  icon: "⚙️", label: "Inställningar" },
 ];
 
 export default function AdminPage() {
@@ -101,9 +103,10 @@ export default function AdminPage() {
       </aside>
 
       <main className="admin-main">
-        {view === "sessions" && <SessionsView headers={headers} apiBase={API_BASE} />}
-        {view === "contacts" && <ContactsView headers={headers} apiBase={API_BASE} />}
+        {view === "sessions"  && <SessionsView  headers={headers} apiBase={API_BASE} />}
+        {view === "contacts"  && <ContactsView  headers={headers} apiBase={API_BASE} />}
         {view === "analytics" && <AnalyticsView headers={headers} apiBase={API_BASE} />}
+        {view === "settings"  && <SettingsView  headers={headers} apiBase={API_BASE} />}
       </main>
     </div>
   );

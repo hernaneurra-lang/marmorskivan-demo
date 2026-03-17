@@ -152,6 +152,18 @@ app.post("/api/contact", rateLimit(5), async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Public: site settings ──
+app.get("/api/settings", async (_req, res) => {
+  if (!HAS_DB) return res.json({});
+  try {
+    const { rows } = await query(`SELECT key, value FROM site_settings`);
+    const settings = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    res.json(settings);
+  } catch (e) {
+    res.json({});
+  }
+});
+
 // ── Analytics ──
 app.post("/api/analytics", async (req, res) => {
   try {
@@ -252,6 +264,35 @@ app.get("/api/admin/contacts", adminAuth, async (req, res) => {
     res.json({ contacts: rows });
   } catch (e) {
     console.error("[admin] contacts:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: get settings ──
+app.get("/api/admin/settings", adminAuth, async (_req, res) => {
+  if (!HAS_DB) return res.json({});
+  try {
+    const { rows } = await query(`SELECT key, value, updated_at FROM site_settings ORDER BY key`);
+    res.json(Object.fromEntries(rows.map((r) => [r.key, r.value])));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: update settings ──
+app.post("/api/admin/settings", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const updates = req.body || {};
+  try {
+    for (const [key, value] of Object.entries(updates)) {
+      await query(
+        `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+        [key, String(value)]
+      );
+    }
+    res.json({ ok: true });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

@@ -536,7 +536,7 @@ function resetFormCompletely() {
         <div className="rounded-2xl border p-5 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-xs font-bold uppercase tracking-widest text-gray-400">
+              <div className="text-xs font-bold uppercase tracking-widest text-gray-600">
                 {t("calc.thickness.title", "Tjocklek")}
               </div>
               <div className="text-sm font-semibold text-gray-900">
@@ -566,7 +566,7 @@ function resetFormCompletely() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-[11px] border-b pb-6">
             <div className="space-y-4">
               <div>
-                <p className="font-bold uppercase text-gray-400 mb-1 tracking-widest">
+                <p className="font-bold uppercase text-gray-600 mb-1 tracking-widest">
                   {t("calc.priceOverview.blocks.stone", "Sten & Yta")}
                 </p>
                 <p className="text-gray-900 font-semibold">
@@ -578,7 +578,7 @@ function resetFormCompletely() {
               </div>
 
               <div>
-                <p className="font-bold uppercase text-gray-400 mb-1 tracking-widest">
+                <p className="font-bold uppercase text-gray-600 mb-1 tracking-widest">
                   {t("calc.priceOverview.blocks.execution", "Utförande")}
                 </p>
                 <p className="text-gray-900">{shapeLabel(shape)}</p>
@@ -624,7 +624,7 @@ function resetFormCompletely() {
               </div>
 
               <div>
-                <p className="font-bold uppercase text-gray-400 mb-1 tracking-widest">
+                <p className="font-bold uppercase text-gray-600 mb-1 tracking-widest">
                   {t("calc.priceOverview.blocks.processing", "Bearbetning")}
                 </p>
                 <p className="text-gray-700">
@@ -739,7 +739,7 @@ function resetFormCompletely() {
 /* --- HJÄLPARE --- */
 function NumberInput({ label, value, onChange }) {
   return (
-    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex flex-col">
+    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest flex flex-col">
       {label}
       <input
         type="number"
