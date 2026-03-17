@@ -142,7 +142,12 @@ export default function ChatWidget() {
       const res = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText, history }),
+        body: JSON.stringify({
+          message: userText,
+          history,
+          sessionId: sessionRef.current?.id,
+          page: window.location.pathname,
+        }),
       });
 
       if (!res.ok) throw new Error("server error");
@@ -169,7 +174,7 @@ export default function ChatWidget() {
       await fetch(`${API_BASE}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, sessionId: sessionRef.current?.id }),
       });
     } catch {}
     setFormSent(true);

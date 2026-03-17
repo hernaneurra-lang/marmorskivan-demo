@@ -5,6 +5,7 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import Landing from "../components/Landing.jsx";
 import App from "../App.jsx";
 import ChatWidget from "../chat/ChatWidget.jsx";
+import AdminPage from "../admin/AdminPage.jsx";
 
 // Material (lazy)
 const Marmor = lazy(() => import("../pages/material/Marmor.jsx"));
@@ -71,6 +72,10 @@ export default function AppRoutes() {
         <Route path="/material/travertin" element={<Travertin />} />
         <Route path="/material/semiprecious" element={<SemiPrecious />} />
         <Route path="/material/atervunnetglas" element={<AtervunnetGlas />} />
+
+        {/* Admin */}
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/*" element={<AdminPage />} />
 
         {/* 404 */}
         <Route
