@@ -5,3 +5,18 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+*.lnk
+
+# Stora bildfiler — ligger på Loopia, inte i repot
+public/images/
+public/products/
+public/hero/
+
+# Gamla/temporära mappar
+boka-tid/
+booking/
+"New send quote build"/
+"public/data/old materials"/
+dist/
+cache/
+logs/
