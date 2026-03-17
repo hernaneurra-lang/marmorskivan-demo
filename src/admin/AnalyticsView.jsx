@@ -1,9 +1,9 @@
 // src/admin/AnalyticsView.jsx — Enhanced analytics with period filter, funnel, visual charts
 import { useState, useEffect, useCallback } from "react";
 import {
-  LineChart, Line, BarChart, Bar,
+  LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
 } from "recharts";
 
 function StatCard({ icon, value, label, color }) {
