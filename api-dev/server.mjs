@@ -43,7 +43,11 @@ function rateLimit(maxPerMin) {
   };
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai = null;
+function getOpenAI() {
+  if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return openai;
+}
 
 const SYSTEM_PROMPT = `Du är en hjälpsam kundtjänstassistent för marmorskivan.se — en svensk e-handel för steniga bänkskivor (marmor, granit, kvartskomposit, kalksten, travertin, terrazzo, onyx m.m.).
 
@@ -68,7 +72,7 @@ app.post("/api/chat", rateLimit(20), async (req, res) => {
   if (message.length > 1000) return res.status(400).json({ error: "message too long" });
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       max_tokens: 300,
       temperature: 0.7,
