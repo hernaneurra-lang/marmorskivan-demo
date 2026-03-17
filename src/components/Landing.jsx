@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { heroTiles } from "../config/site";
-import Modal from "./Modal";
+import Modal from "./modal";
 import MaterialLinks from "./MaterialLinks";
 import SiteFooter from "./SiteFooter";
 
