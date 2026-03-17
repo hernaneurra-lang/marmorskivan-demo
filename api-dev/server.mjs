@@ -22,11 +22,11 @@ const ALLOWED_ORIGINS = [
 const app = express();
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // curl / server-to-server
+    if (!origin) return cb(null, true);
     const ok = ALLOWED_ORIGINS.some((o) => typeof o === "string" ? o === origin : o.test(origin));
     cb(ok ? null : new Error("CORS blocked"), ok);
   },
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
 }));
 app.use(express.json({ limit: "16kb" }));
 
@@ -51,6 +51,16 @@ function adminAuth(req, res, next) {
   const token = req.headers["x-admin-token"] || req.query.token;
   if (token !== ADMIN_TOKEN) return res.status(401).json({ error: "unauthorized" });
   next();
+}
+
+// ── Period helper ──
+function periodInterval(period) {
+  switch (period) {
+    case "24h": return "24 hours";
+    case "7d":  return "7 days";
+    case "90d": return "90 days";
+    default:    return "30 days";
+  }
 }
 
 let openai = null;
@@ -168,7 +178,6 @@ app.get("/api/settings", async (_req, res) => {
 app.post("/api/analytics", async (req, res) => {
   try {
     const { event, session, page, ts, ...rest } = req.body || {};
-    console.log(`[analytics] ${event} | ${page} | session=${session} | ts=${ts}`);
     if (HAS_DB && event) {
       await query(
         `INSERT INTO analytics_events (event, session_id, page, data) VALUES ($1, $2, $3, $4)`,
@@ -193,12 +202,25 @@ app.post("/api/admin/login", (req, res) => {
 // ── Admin: list chat sessions ──
 app.get("/api/admin/sessions", adminAuth, async (req, res) => {
   if (!HAS_DB) return res.json({ sessions: [] });
+  const { filter, search } = req.query;
   try {
+    let where = "1=1";
+    const params = [];
+    if (filter === "leads") { where += ` AND EXISTS(SELECT 1 FROM contacts WHERE session_id = s.id)`; }
+    if (filter === "open")  { where += ` AND s.status = 'open'`; }
+    if (filter === "resolved") { where += ` AND s.status = 'resolved'`; }
+    if (search) {
+      params.push(`%${search}%`);
+      where += ` AND (s.id ILIKE $${params.length} OR s.page ILIKE $${params.length} OR s.note ILIKE $${params.length})`;
+    }
     const { rows } = await query(`
       SELECT
         s.id,
         s.page,
         s.ip,
+        s.status,
+        s.priority,
+        s.note,
         s.created_at,
         s.last_message_at,
         COUNT(m.id) AS message_count,
@@ -206,10 +228,11 @@ app.get("/api/admin/sessions", adminAuth, async (req, res) => {
         EXISTS(SELECT 1 FROM contacts WHERE session_id = s.id) AS has_contact
       FROM chat_sessions s
       LEFT JOIN chat_messages m ON m.session_id = s.id
+      WHERE ${where}
       GROUP BY s.id
       ORDER BY s.last_message_at DESC
-      LIMIT 100
-    `);
+      LIMIT 200
+    `, params);
     res.json({ sessions: rows });
   } catch (e) {
     console.error("[admin] sessions:", e.message);
@@ -219,7 +242,7 @@ app.get("/api/admin/sessions", adminAuth, async (req, res) => {
 
 // ── Admin: get messages for a session ──
 app.get("/api/admin/sessions/:id/messages", adminAuth, async (req, res) => {
-  if (!HAS_DB) return res.json({ messages: [], contact: null });
+  if (!HAS_DB) return res.json({ messages: [], contact: null, session: null });
   try {
     const { rows: messages } = await query(
       `SELECT id, role, content, created_at FROM chat_messages WHERE session_id = $1 ORDER BY created_at ASC`,
@@ -229,14 +252,18 @@ app.get("/api/admin/sessions/:id/messages", adminAuth, async (req, res) => {
       `SELECT name, phone, email, message, created_at FROM contacts WHERE session_id = $1 ORDER BY created_at DESC LIMIT 1`,
       [req.params.id]
     );
-    res.json({ messages, contact: contacts[0] || null });
+    const { rows: sessions } = await query(
+      `SELECT id, page, ip, status, priority, note, created_at FROM chat_sessions WHERE id = $1`,
+      [req.params.id]
+    );
+    res.json({ messages, contact: contacts[0] || null, session: sessions[0] || null });
   } catch (e) {
     console.error("[admin] messages:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── Admin: send agent reply in a session ──
+// ── Admin: send agent reply ──
 app.post("/api/admin/sessions/:id/reply", adminAuth, async (req, res) => {
   const { content } = req.body || {};
   if (!content?.trim()) return res.status(400).json({ error: "content required" });
@@ -254,6 +281,25 @@ app.post("/api/admin/sessions/:id/reply", adminAuth, async (req, res) => {
   }
 });
 
+// ── Admin: update session status/priority/note ──
+app.patch("/api/admin/sessions/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const { status, priority, note } = req.body || {};
+  const sets = [];
+  const params = [];
+  if (status   !== undefined) { params.push(status);   sets.push(`status = $${params.length}`); }
+  if (priority !== undefined) { params.push(priority); sets.push(`priority = $${params.length}`); }
+  if (note     !== undefined) { params.push(note);     sets.push(`note = $${params.length}`); }
+  if (!sets.length) return res.json({ ok: true });
+  params.push(req.params.id);
+  try {
+    await query(`UPDATE chat_sessions SET ${sets.join(", ")} WHERE id = $${params.length}`, params);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Admin: contacts list ──
 app.get("/api/admin/contacts", adminAuth, async (req, res) => {
   if (!HAS_DB) return res.json({ contacts: [] });
@@ -264,6 +310,92 @@ app.get("/api/admin/contacts", adminAuth, async (req, res) => {
     res.json({ contacts: rows });
   } catch (e) {
     console.error("[admin] contacts:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: realtime (active sessions last 5 min) ──
+app.get("/api/admin/realtime", adminAuth, async (_req, res) => {
+  if (!HAS_DB) return res.json({ active: 0, recent_events: 0 });
+  try {
+    const [sessions, events] = await Promise.all([
+      query(`SELECT COUNT(*) AS cnt FROM chat_sessions WHERE last_message_at > NOW() - INTERVAL '5 minutes'`),
+      query(`SELECT COUNT(*) AS cnt FROM analytics_events WHERE created_at > NOW() - INTERVAL '5 minutes'`),
+    ]);
+    res.json({
+      active_chats: Number(sessions.rows[0]?.cnt || 0),
+      recent_events: Number(events.rows[0]?.cnt || 0),
+    });
+  } catch (e) {
+    res.json({ active_chats: 0, recent_events: 0 });
+  }
+});
+
+// ── Admin: analytics (with period + funnel) ──
+app.get("/api/admin/analytics", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({});
+  const interval = periodInterval(req.query.period);
+  try {
+    const [
+      pageViews, uniqueSessions, chatSessions, contacts,
+      calculatorOpens, offerSubmits,
+      topPages, topEvents, dailyChats, popularQuestions,
+    ] = await Promise.all([
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`SELECT COUNT(DISTINCT session_id) AS total FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL`),
+      query(`SELECT COUNT(*) AS total FROM chat_sessions WHERE created_at > NOW() - INTERVAL '${interval}'`),
+      query(`SELECT COUNT(*) AS total FROM contacts WHERE created_at > NOW() - INTERVAL '${interval}'`),
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event IN ('calculator_open', 'app_open') AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event IN ('offer_submit', 'offer_request') AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`
+        SELECT page, COUNT(*) AS views
+        FROM analytics_events WHERE event = 'page_view' AND page IS NOT NULL AND created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY page ORDER BY views DESC LIMIT 10
+      `),
+      query(`
+        SELECT event, COUNT(*) AS count
+        FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY event ORDER BY count DESC LIMIT 15
+      `),
+      query(`
+        SELECT DATE(created_at) AS day, COUNT(*) AS sessions
+        FROM chat_sessions
+        WHERE created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY day ORDER BY day DESC
+      `),
+      query(`
+        SELECT content, COUNT(*) AS count
+        FROM chat_messages WHERE role = 'user' AND created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY content ORDER BY count DESC LIMIT 10
+      `),
+    ]);
+
+    const pv   = Number(pageViews.rows[0]?.total || 0);
+    const calc = Number(calculatorOpens.rows[0]?.total || 0);
+    const offer = Number(offerSubmits.rows[0]?.total || 0);
+    const cont  = Number(contacts.rows[0]?.total || 0);
+    const chats = Number(chatSessions.rows[0]?.total || 0);
+
+    res.json({
+      totalPageViews:    pv,
+      uniqueSessions:    Number(uniqueSessions.rows[0]?.total || 0),
+      chatSessions:      chats,
+      totalContacts:     cont,
+      calculatorOpens:   calc,
+      offerSubmits:      offer,
+      funnel: [
+        { label: "Sidvisningar",          value: pv,    pct: 100 },
+        { label: "Kalkylator öppnad",      value: calc,  pct: pv  ? Math.round(calc  / pv  * 100) : 0 },
+        { label: "Offert begärd",          value: offer, pct: calc ? Math.round(offer / calc * 100) : 0 },
+        { label: "Kontaktuppgifter lämnade", value: cont, pct: offer ? Math.round(cont / offer * 100) : 0 },
+      ],
+      topPages:          topPages.rows,
+      topEvents:         topEvents.rows,
+      dailyChats:        dailyChats.rows,
+      popularQuestions:  popularQuestions.rows,
+    });
+  } catch (e) {
+    console.error("[admin] analytics:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -297,44 +429,159 @@ app.post("/api/admin/settings", adminAuth, async (req, res) => {
   }
 });
 
-// ── Admin: analytics summary ──
-app.get("/api/admin/analytics", adminAuth, async (req, res) => {
-  if (!HAS_DB) return res.json({ summary: {} });
+// ── Admin: canned responses ──
+app.get("/api/admin/canned-responses", adminAuth, async (_req, res) => {
+  if (!HAS_DB) return res.json({ responses: [] });
   try {
-    const [pageViews, topPages, topEvents, dailyChats, popularQuestions] = await Promise.all([
-      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view'`),
-      query(`
-        SELECT page, COUNT(*) AS views
-        FROM analytics_events WHERE event = 'page_view' AND page IS NOT NULL
-        GROUP BY page ORDER BY views DESC LIMIT 10
-      `),
-      query(`
-        SELECT event, COUNT(*) AS count
-        FROM analytics_events
-        GROUP BY event ORDER BY count DESC LIMIT 15
-      `),
-      query(`
-        SELECT DATE(created_at) AS day, COUNT(*) AS sessions
-        FROM chat_sessions
-        WHERE created_at > NOW() - INTERVAL '30 days'
-        GROUP BY day ORDER BY day DESC
-      `),
-      query(`
-        SELECT content, COUNT(*) AS count
-        FROM chat_messages WHERE role = 'user'
-        GROUP BY content ORDER BY count DESC LIMIT 10
-      `),
-    ]);
-
-    res.json({
-      totalPageViews: pageViews.rows[0]?.total || 0,
-      topPages: topPages.rows,
-      topEvents: topEvents.rows,
-      dailyChats: dailyChats.rows,
-      popularQuestions: popularQuestions.rows,
-    });
+    const { rows } = await query(`SELECT id, shortcut, content, created_at FROM canned_responses ORDER BY shortcut`);
+    res.json({ responses: rows });
   } catch (e) {
-    console.error("[admin] analytics:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/admin/canned-responses", adminAuth, async (req, res) => {
+  const { shortcut, content } = req.body || {};
+  if (!shortcut?.trim() || !content?.trim()) return res.status(400).json({ error: "shortcut and content required" });
+  if (!HAS_DB) return res.json({ ok: true });
+  try {
+    const { rows } = await query(
+      `INSERT INTO canned_responses (shortcut, content) VALUES ($1, $2) RETURNING id`,
+      [shortcut.trim(), content.trim()]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/canned-responses/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  try {
+    await query(`DELETE FROM canned_responses WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: knowledge base ──
+app.get("/api/admin/knowledge-base", adminAuth, async (_req, res) => {
+  if (!HAS_DB) return res.json({ items: [] });
+  try {
+    const { rows } = await query(`SELECT id, question, answer, active, created_at FROM knowledge_base ORDER BY created_at DESC`);
+    res.json({ items: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/admin/knowledge-base", adminAuth, async (req, res) => {
+  const { question, answer } = req.body || {};
+  if (!question?.trim() || !answer?.trim()) return res.status(400).json({ error: "question and answer required" });
+  if (!HAS_DB) return res.json({ ok: true });
+  try {
+    const { rows } = await query(
+      `INSERT INTO knowledge_base (question, answer) VALUES ($1, $2) RETURNING id`,
+      [question.trim(), answer.trim()]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch("/api/admin/knowledge-base/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const { question, answer, active } = req.body || {};
+  const sets = [];
+  const params = [];
+  if (question !== undefined) { params.push(question); sets.push(`question = $${params.length}`); }
+  if (answer   !== undefined) { params.push(answer);   sets.push(`answer = $${params.length}`); }
+  if (active   !== undefined) { params.push(active);   sets.push(`active = $${params.length}`); }
+  if (!sets.length) return res.json({ ok: true });
+  params.push(req.params.id);
+  try {
+    await query(`UPDATE knowledge_base SET ${sets.join(", ")} WHERE id = $${params.length}`, params);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/knowledge-base/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  try {
+    await query(`DELETE FROM knowledge_base WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: CSV exports ──
+app.get("/api/admin/export/:type", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.status(503).json({ error: "no_db" });
+  const period = req.query.period || "30d";
+  const interval = periodInterval(period);
+  const type = req.params.type;
+
+  try {
+    let rows, headers, filename;
+
+    if (type === "contacts") {
+      ({ rows } = await query(`
+        SELECT id, name, phone, email, message, session_id, created_at
+        FROM contacts WHERE created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC
+      `));
+      headers = ["id", "name", "phone", "email", "message", "session_id", "created_at"];
+      filename = `kontakter_${period}_${new Date().toISOString().slice(0,10)}.csv`;
+
+    } else if (type === "sessions") {
+      ({ rows } = await query(`
+        SELECT s.id, s.page, s.ip, s.status, s.priority,
+               COUNT(m.id) AS messages,
+               EXISTS(SELECT 1 FROM contacts WHERE session_id = s.id) AS has_contact,
+               s.created_at, s.last_message_at
+        FROM chat_sessions s
+        LEFT JOIN chat_messages m ON m.session_id = s.id
+        WHERE s.created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY s.id ORDER BY s.created_at DESC
+      `));
+      headers = ["id", "page", "ip", "status", "priority", "messages", "has_contact", "created_at", "last_message_at"];
+      filename = `chattar_${period}_${new Date().toISOString().slice(0,10)}.csv`;
+
+    } else if (type === "events") {
+      ({ rows } = await query(`
+        SELECT id, event, session_id, page, data, created_at
+        FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 10000
+      `));
+      headers = ["id", "event", "session_id", "page", "data", "created_at"];
+      filename = `events_${period}_${new Date().toISOString().slice(0,10)}.csv`;
+
+    } else {
+      return res.status(400).json({ error: "unknown export type" });
+    }
+
+    const escape = (v) => {
+      if (v == null) return "";
+      const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const csv = [
+      headers.join(","),
+      ...rows.map((r) => headers.map((h) => escape(r[h])).join(",")),
+    ].join("\n");
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send("\uFEFF" + csv); // BOM for Excel UTF-8
+  } catch (e) {
+    console.error("[admin] export:", e.message);
     res.status(500).json({ error: e.message });
   }
 });

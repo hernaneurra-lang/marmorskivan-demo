@@ -1,9 +1,12 @@
 // src/admin/AdminPage.jsx — Marmorskivan Admin Panel
 import { useState, useEffect } from "react";
 import "./admin.css";
+import DashboardView from "./DashboardView.jsx";
 import SessionsView from "./SessionsView.jsx";
 import AnalyticsView from "./AnalyticsView.jsx";
 import ContactsView from "./ContactsView.jsx";
+import ReportsView from "./ReportsView.jsx";
+import KnowledgeBaseView from "./KnowledgeBaseView.jsx";
 import SettingsView from "./SettingsView.jsx";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
@@ -62,15 +65,18 @@ function Login({ onLogin }) {
 }
 
 const NAV = [
-  { key: "sessions",  icon: "💬", label: "Chattar" },
-  { key: "contacts",  icon: "📞", label: "Kontakter" },
-  { key: "analytics", icon: "📊", label: "Analytics" },
-  { key: "settings",  icon: "⚙️", label: "Inställningar" },
+  { key: "dashboard",  icon: "🏠", label: "Dashboard" },
+  { key: "sessions",   icon: "💬", label: "Chattar" },
+  { key: "contacts",   icon: "📞", label: "Kontakter" },
+  { key: "analytics",  icon: "📊", label: "Analytics" },
+  { key: "reports",    icon: "📥", label: "Rapporter" },
+  { key: "knowledge",  icon: "📚", label: "Kunskapsbas" },
+  { key: "settings",   icon: "⚙️", label: "Inställningar" },
 ];
 
 export default function AdminPage() {
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || "");
-  const [view, setView] = useState("sessions");
+  const [view, setView] = useState("dashboard");
 
   if (!token) return <Login onLogin={setToken} />;
 
@@ -81,7 +87,7 @@ export default function AdminPage() {
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand">
           🪨 Marmorskivan
-          <span>Admin panel</span>
+          <span>Admin</span>
         </div>
         <nav className="admin-nav">
           {NAV.map((n) => (
@@ -103,10 +109,13 @@ export default function AdminPage() {
       </aside>
 
       <main className="admin-main">
-        {view === "sessions"  && <SessionsView  headers={headers} apiBase={API_BASE} />}
-        {view === "contacts"  && <ContactsView  headers={headers} apiBase={API_BASE} />}
-        {view === "analytics" && <AnalyticsView headers={headers} apiBase={API_BASE} />}
-        {view === "settings"  && <SettingsView  headers={headers} apiBase={API_BASE} />}
+        {view === "dashboard"  && <DashboardView    headers={headers} apiBase={API_BASE} onNavigate={setView} />}
+        {view === "sessions"   && <SessionsView     headers={headers} apiBase={API_BASE} />}
+        {view === "contacts"   && <ContactsView     headers={headers} apiBase={API_BASE} />}
+        {view === "analytics"  && <AnalyticsView    headers={headers} apiBase={API_BASE} />}
+        {view === "reports"    && <ReportsView      headers={headers} apiBase={API_BASE} />}
+        {view === "knowledge"  && <KnowledgeBaseView headers={headers} apiBase={API_BASE} />}
+        {view === "settings"   && <SettingsView     headers={headers} apiBase={API_BASE} />}
       </main>
     </div>
   );
