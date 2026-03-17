@@ -169,7 +169,28 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses }
           {Object.entries(PRIORITY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
 
-        <div style={{ fontSize: 11, color: "var(--muted)", marginLeft: "auto", textAlign: "right", flexShrink: 0 }}>
+        {/* End session button */}
+        {sessionInfo.status !== "resolved" ? (
+          <button
+            className="btn-refresh"
+            onClick={() => updateStatus("resolved")}
+            style={{ flexShrink: 0, fontSize: 12, color: "var(--red)", borderColor: "var(--red)" }}
+            title="Avsluta session"
+          >
+            ✓ Avsluta
+          </button>
+        ) : (
+          <button
+            className="btn-refresh"
+            onClick={() => updateStatus("open")}
+            style={{ flexShrink: 0, fontSize: 12, color: "var(--green)" }}
+            title="Öppna igen"
+          >
+            ↩ Öppna
+          </button>
+        )}
+
+        <div style={{ fontSize: 11, color: "var(--muted)", marginLeft: "auto", textAlign: "right", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
           {session.page}
         </div>
       </div>

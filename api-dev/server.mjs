@@ -174,6 +174,22 @@ app.get("/api/settings", async (_req, res) => {
   }
 });
 
+// ── Public: fetch messages for a session (customer polls for agent replies) ──
+app.get("/api/chat/messages/:sessionId", rateLimit(60), async (req, res) => {
+  if (!HAS_DB) return res.json({ messages: [] });
+  try {
+    const { after } = req.query;
+    let sql = `SELECT id, role, content, created_at FROM chat_messages WHERE session_id = $1`;
+    const params = [req.params.sessionId];
+    if (after) { params.push(after); sql += ` AND created_at > $2`; }
+    sql += ` ORDER BY created_at ASC`;
+    const { rows } = await query(sql, params);
+    res.json({ messages: rows });
+  } catch (e) {
+    res.json({ messages: [] });
+  }
+});
+
 // ── Analytics ──
 app.post("/api/analytics", async (req, res) => {
   try {

@@ -7,7 +7,8 @@ const LOGO_SIZES = [
   { value: "large",  label: "Stor (200px)" },
 ];
 
-const BOT_AVATARS = ["🪨", "💎", "🏠", "🛠️", "✨", "🟢", "🤖", "👷"];
+const BOT_AVATARS   = ["🪨", "💎", "🏠", "🛠️", "✨", "🟢", "🤖", "👷"];
+const AGENT_AVATARS = ["🧑‍💼", "👨‍💼", "👩‍💼", "🙋", "🙋‍♂️", "🙋‍♀️", "💁", "🤝"];
 
 function ColorPicker({ label, value, onChange }) {
   return (
@@ -210,6 +211,38 @@ export default function SettingsView({ headers, apiBase }) {
                   </button>
                 ))}
               </div>
+            </div>
+          </Section>
+
+          {/* Agent profile */}
+          <Section title="🧑‍💼 Agentprofil (Human-support)">
+            <TextField
+              label="Agent-namn (visas för kunden)"
+              value={settings.agent_name || ""}
+              onChange={set("agent_name")}
+              placeholder="Kundtjänst"
+            />
+            <div style={{ marginBottom: 16 }}>
+              <Label>Agent-avatar</Label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {AGENT_AVATARS.map((em) => (
+                  <button
+                    key={em}
+                    onClick={() => set("agent_avatar")(em)}
+                    style={{
+                      width: 40, height: 40, fontSize: 22, borderRadius: 8,
+                      border: `2px solid ${settings.agent_avatar === em ? "var(--green)" : "var(--border)"}`,
+                      background: settings.agent_avatar === em ? "rgba(5,150,105,0.1)" : "var(--surface2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--muted)" }}>
+              Agent-svar du skickar via Chattar-vyn visas med detta namn och denna avatar hos kunden i realtid.
             </div>
           </Section>
 

@@ -120,6 +120,8 @@ export async function migrate() {
     ["chat_greeting",     "Hej! Hur kan jag hjälpa dig med din bänkskiva? 🪨"],
     ["chat_bot_name",     "Marmorskivan AI"],
     ["chat_bot_avatar",   "🪨"],
+    ["agent_name",        "Kundtjänst"],
+    ["agent_avatar",      "🧑‍💼"],
     // Navigation & SEO
     ["nav_cta_text",      "Begär offert"],
     ["seo_title",         "Marmorskivan"],
