@@ -46,6 +46,8 @@ export default defineConfig(() => {
               "react-i18next",
               "use-sync-external-store",
               "framer-motion",
+              "recharts",
+              "react-is",
             ];
             if (corePkgs.some((p) => id.includes(p))) return "vendor-core";
 
