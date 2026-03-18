@@ -127,7 +127,7 @@ export default function EdgeTreatmentSection({
             className={`rounded-xl border px-3 py-2 text-left ${
               edgeType === opt.key
                 ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-gray-50 hover:bg-gray-100"
+                : "bg-white border-gray-300 text-gray-900 hover:border-emerald-400"
             }`}
             title={opt.info}
           >

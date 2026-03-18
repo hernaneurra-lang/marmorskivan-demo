@@ -196,8 +196,8 @@ export default function OpeningsSection({ value, onChange }) {
             <button
               key={tb.key}
               type="button"
-              className={`px-3 py-1.5 rounded-lg border text-sm ${
-                tab === tb.key ? "bg-emerald-50 border-emerald-300" : "bg-white hover:bg-gray-50"
+              className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${
+                tab === tb.key ? "bg-emerald-600 border-emerald-600 text-white shadow-sm" : "bg-white border-gray-300 text-gray-800 hover:border-emerald-400"
               }`}
               onClick={() => setTab(tb.key)}
             >
@@ -514,8 +514,8 @@ function ModeBtn({ active, onClick, children }) {
   return (
     <button
       type="button"
-      className={`px-3 py-1.5 rounded-lg border text-sm ${
-        active ? "bg-emerald-50 border-emerald-300" : "bg-white hover:bg-gray-50"
+      className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${
+        active ? "bg-emerald-600 border-emerald-600 text-white shadow-sm" : "bg-white border-gray-300 text-gray-900 hover:border-emerald-400"
       }`}
       onClick={(e) => {
         e.stopPropagation();
@@ -819,7 +819,7 @@ function CatalogCard({ item, onSelect, replaceMode }) {
         <div className="mt-auto pt-3 flex items-center gap-2">
           <button
             type="button"
-            className="px-3 py-1.5 rounded-xl border hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-xl border text-gray-900 hover:bg-gray-50"
             onClick={onSelect}
             title={
               replaceMode
@@ -833,7 +833,7 @@ function CatalogCard({ item, onSelect, replaceMode }) {
           </button>
           <button
             type="button"
-            className="px-3 py-1.5 rounded-xl border hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-xl border text-gray-900 hover:bg-gray-50"
             onClick={() => setOpen((o) => !o)}
           >
             {open

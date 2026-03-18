@@ -399,7 +399,7 @@ function resetFormCompletely() {
                 className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
                   shape === s
                     ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
-                    : "bg-white border-gray-300 text-gray-800 hover:border-emerald-400 hover:text-emerald-700"
+                    : "bg-white border-gray-300 text-gray-900 hover:border-emerald-400 hover:text-emerald-700"
                 }`}
               >
                 {shapeLabel(s)}
@@ -553,7 +553,7 @@ function resetFormCompletely() {
                   className={`px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
                     String(thicknessMm) === String(th)
                       ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
-                      : "bg-white border-gray-300 text-gray-800 hover:border-emerald-400 hover:text-emerald-700"
+                      : "bg-white border-gray-300 text-gray-900 hover:border-emerald-400 hover:text-emerald-700"
                   }`}
                 >
                   {th} mm
