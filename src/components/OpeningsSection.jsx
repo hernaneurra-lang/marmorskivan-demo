@@ -364,7 +364,7 @@ export default function OpeningsSection({ value, onChange }) {
 function CountPicker({ label, max, value, onChange }) {
   return (
     <label className="text-sm">
-      <span className="text-gray-600">{label}</span>
+      <span className="text-gray-800">{label}</span>
       <select
         className="mt-1 w-full rounded-lg border px-3 py-2"
         value={value}
@@ -481,7 +481,7 @@ function CategoryCard({
             </div>
           ) : (
             <div className="rounded-xl border p-3 bg-gray-50">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-800">
                 {t("openings.noneSelectedYet", { defaultValue: "Inget valt ännu." })}
               </div>
               <button type="button" className="mt-2 px-3 py-1.5 rounded-xl border hover:bg-gray-50" onClick={onOpenCatalogNew}>
@@ -575,7 +575,7 @@ function MountPicker({ type, value, onChange, onPreview }) {
                   onError={(e) => (e.currentTarget.style.opacity = "0.4")}
                 />
               )}
-              <span className="text-xs mt-1">{opt.label}</span>
+              <span className="text-xs mt-1 text-gray-900">{opt.label}</span>
             </label>
           );
         })}

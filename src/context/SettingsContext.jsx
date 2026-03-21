@@ -34,7 +34,7 @@ const DEFAULTS = {
   contact_address:  "",
   contact_hours:    "Mån–Fre 8–17",
   // Footer
-  footer_company:   "Marmorskivan AB",
+  footer_company:   "marmorskivan.se",
   footer_tagline:   "Sveriges smidigaste väg till din nya bänkskiva",
   footer_orgnr:     "",
   // Calculator

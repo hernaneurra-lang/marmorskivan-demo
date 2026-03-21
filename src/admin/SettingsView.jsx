@@ -311,7 +311,7 @@ export default function SettingsView({ headers, apiBase }) {
 
           {/* Footer */}
           <Section title="🦶 Footer">
-            <TextField label="Företagsnamn" value={settings.footer_company || ""} onChange={set("footer_company")} placeholder="Marmorskivan AB" />
+            <TextField label="Företagsnamn" value={settings.footer_company || ""} onChange={set("footer_company")} placeholder="marmorskivan.se" />
             <TextField label="Tagline" value={settings.footer_tagline || ""} onChange={set("footer_tagline")} placeholder="Sveriges smidigaste väg till din nya bänkskiva" />
             <TextField label="Org.nummer" value={settings.footer_orgnr || ""} onChange={set("footer_orgnr")} placeholder="556xxx-xxxx" />
           </Section>
