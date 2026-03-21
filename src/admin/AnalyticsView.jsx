@@ -72,6 +72,31 @@ function FunnelViz({ funnel }) {
   );
 }
 
+// ── Linear regression helper ──
+function linReg(points) {
+  // points: [{x, y}]
+  const n = points.length;
+  if (n < 2) return null;
+  const sumX = points.reduce((a, p) => a + p.x, 0);
+  const sumY = points.reduce((a, p) => a + p.y, 0);
+  const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+  const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+  const denom = n * sumX2 - sumX * sumX;
+  if (denom === 0) return null;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+  return { slope, intercept, predict: (x) => slope * x + intercept };
+}
+
+// ── Z-score anomaly detection ──
+function zScoreAnomalies(values, threshold = 2.0) {
+  if (values.length < 3) return [];
+  const mean = values.reduce((a, v) => a + v, 0) / values.length;
+  const std = Math.sqrt(values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length);
+  if (std === 0) return [];
+  return values.map((v, i) => ({ index: i, value: v, z: (v - mean) / std })).filter((p) => Math.abs(p.z) >= threshold);
+}
+
 // ── AI Insights generator (client-side, from analytics data) ──
 function generateInsights(data) {
   if (!data) return [];
@@ -83,14 +108,78 @@ function generateInsights(data) {
   const calc = Number(data.calculatorOpens || 0);
   const handovers = Number(data.handoverSessions || 0);
 
-  // Chat engagement rate
+  // ── Traffic prediction (linear regression on dailyPageViews) ──
+  if (data.dailyPageViews?.length >= 5) {
+    const sorted = [...data.dailyPageViews].reverse(); // oldest first
+    const pts = sorted.map((d, i) => ({ x: i, y: Number(d.views) }));
+    const reg = linReg(pts);
+    if (reg) {
+      const nextWeek = Math.max(0, Math.round(reg.predict(pts.length + 6)));
+      const trend = reg.slope;
+      if (trend > 1) {
+        insights.push({ icon: "📈", text: `Trafiken ökar — prognos för nästa 7 dagar: ~${nextWeek.toLocaleString("sv-SE")} sidvisningar. Bra momentum!` });
+      } else if (trend < -1) {
+        insights.push({ icon: "📉", text: `Trafiken minskar (${Math.round(trend)} vis/dag). Prognos nästa 7 dagar: ~${nextWeek.toLocaleString("sv-SE")} visningar. Överväg en kampanj.` });
+      }
+    }
+  }
+
+  // ── Anomaly detection on daily pageviews ──
+  if (data.dailyPageViews?.length >= 5) {
+    const sorted = [...data.dailyPageViews].reverse();
+    const values = sorted.map((d) => Number(d.views));
+    const anomalies = zScoreAnomalies(values);
+    const spikes = anomalies.filter((a) => a.z > 0);
+    const drops  = anomalies.filter((a) => a.z < 0);
+    if (spikes.length > 0) {
+      const spike = spikes[spikes.length - 1];
+      const day = sorted[spike.index]?.day;
+      const label = day ? new Date(day).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) : "okänt datum";
+      insights.push({ icon: "⚡", text: `Trafiktopp detekterad: ${spike.value.toLocaleString("sv-SE")} visningar ${label} (${Math.round(spike.z * 10) / 10}σ över snitt). Vad hände den dagen?` });
+    }
+    if (drops.length > 0 && !spikes.length) {
+      const drop = drops[drops.length - 1];
+      const day = sorted[drop.index]?.day;
+      const label = day ? new Date(day).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) : "okänt datum";
+      insights.push({ icon: "⚠️", text: `Trafiktapp detekterat ${label} (${Math.round(Math.abs(drop.z) * 10) / 10}σ under snitt). Kolla om sidan var nere eller om en länk försvann.` });
+    }
+  }
+
+  // ── User segmentation ──
+  if (pv > 0) {
+    const bounced      = Math.max(0, pv - calc - chats);
+    const browsers     = Math.max(0, calc - offers);
+    const engaged      = Math.max(0, offers - contacts);
+    const converters   = contacts;
+    const bounceRate   = Math.round(bounced / pv * 100);
+    const convRate2    = pv > 0 ? Math.round(converters / pv * 100) : 0;
+    if (pv >= 10) {
+      insights.push({
+        icon: "👥",
+        text: `Besökarsegment: ${bounceRate}% lämnar direkt (${bounced}), ${Math.round(browsers/pv*100)}% surfar (${browsers}), ${Math.round(engaged/pv*100)}% engageras (${engaged}), ${convRate2}% konverterar (${converters}).`,
+      });
+    }
+    if (bounceRate > 60) {
+      insights.push({ icon: "💡", text: `Hög avhoppsfrekvens (${bounceRate}%). Försök förbättra hero-sektionen och laddningstiden för att hålla kvar fler besökare.` });
+    }
+  }
+
+  // ── Peak hour insight ──
+  if (data.peakHours?.length) {
+    const topHour = [...data.peakHours].sort((a, b) => Number(b.visits) - Number(a.visits))[0];
+    if (topHour) {
+      insights.push({ icon: "🕐", text: `Flest besök klockan ${topHour.hour}:00 (Stockholm-tid). Schemalägg kampanjer och sociala inlägg runt denna tid.` });
+    }
+  }
+
+  // ── Chat engagement rate ──
   if (pv > 0 && chats > 0) {
     const chatRate = Math.round(chats / pv * 100);
     if (chatRate >= 10) insights.push({ icon: "🚀", text: `Hög chattengagemang — ${chatRate}% av besökarna startar en chatt. Branschsnitt är ~5%.` });
     else if (chatRate < 3) insights.push({ icon: "💡", text: `Låg chattengagemang (${chatRate}%). Prova att ändra hälsningsmeddelandet eller visa chatten mer proaktivt.` });
   }
 
-  // Funnel drop-offs
+  // ── Funnel drop-offs ──
   if (calc > 0 && offers === 0) {
     insights.push({ icon: "⚠️", text: `${calc} öppnade kalkylatorn men ingen skickade offert. Trolig friktion — kolla om offertformuläret är tydligt.` });
   } else if (calc > 0 && offers > 0) {
@@ -99,25 +188,33 @@ function generateInsights(data) {
     else if (convRate < 8) insights.push({ icon: "💡", text: `Låg konvertering kalkylator → offert (${convRate}%). Prova ett mer synligt CTA-steg i kalkylatorn.` });
   }
 
-  // Handover ratio
+  // ── Handover ratio ──
   if (chats > 0 && handovers > 0) {
     const hRate = Math.round(handovers / chats * 100);
     if (hRate > 30) insights.push({ icon: "🤝", text: `${hRate}% av chattar eskaleras till human agent. AI:n kanske inte täcker alla vanliga frågor — utöka kunskapsbasen.` });
   }
 
-  // Contact quality
+  // ── Contact quality ──
   if (contacts > 0 && offers > 0) {
     const quality = Math.round(contacts / offers * 100);
     if (quality >= 50) insights.push({ icon: "📞", text: `${quality}% av offertintresserade lämnar kontaktuppgifter — stark köpintention.` });
   }
 
-  // Top geo insight
+  // ── Top referrer insight ──
+  if (data.referrers?.length > 0) {
+    const top = data.referrers[0];
+    if (top && Number(top.visits) > 1) {
+      insights.push({ icon: "🔗", text: `Starkaste trafikkälla: "${top.source}" med ${Number(top.visits).toLocaleString("sv-SE")} besök. Investera mer i den kanalen.` });
+    }
+  }
+
+  // ── Top geo insight ──
   if (data.geoCountries?.length > 0) {
     const top = data.geoCountries[0];
     if (top && Number(top.sessions) > 1) insights.push({ icon: "🌍", text: `Majoriteten av besökarna (${Number(top.sessions).toLocaleString("sv-SE")}) kommer från ${top.country}. Vill du rikta content mot dem?` });
   }
 
-  // Top page insight
+  // ── Top page insight ──
   if (data.topPages?.length > 0) {
     const top = data.topPages[0];
     if (top) insights.push({ icon: "📄", text: `Populäraste sidan: "${top.page}" med ${Number(top.views).toLocaleString("sv-SE")} visningar. Bra plats för CTA eller specialerbjudande.` });

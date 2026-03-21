@@ -1,6 +1,7 @@
 // Path: src/router/Router.jsx
 import React, { lazy, Suspense } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import SEO from "../components/SEO.jsx";
 
 import Landing from "../components/Landing.jsx";
 import App from "../App.jsx";
@@ -41,10 +42,22 @@ function Loader() {
   );
 }
 
+function SEOWrapper() {
+  const { pathname } = useLocation();
+  return <SEO path={pathname} />;
+}
+
+function ChatWidgetWrapper() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/admin")) return null;
+  return <ChatWidget />;
+}
+
 export default function AppRoutes() {
   return (
     <Suspense fallback={<Loader />}>
-      <ChatWidget />
+      <SEOWrapper />
+      <ChatWidgetWrapper />
       <Routes>
         {/* Startsida */}
         <Route path="/" element={<LandingRouteWrapper />} />

@@ -8,36 +8,63 @@ let pageEntryTime = Date.now();
 let currentPage = null;
 let maxScrollDepth = 0;
 
-// ── Browser fingerprint (lightweight, privacy-safe) ──
+// ── Browser fingerprint (canvas + WebGL + audio + device) ──
 let _fp = null;
 function getFingerprint() {
   if (_fp) return _fp;
   try {
     const nav = navigator;
-    const screen = window.screen;
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const scr = window.screen;
+    const tz  = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Canvas fingerprint
+    let canvasHash = "";
+    try {
+      const c = document.createElement("canvas");
+      const ctx = c.getContext("2d");
+      ctx.textBaseline = "top";
+      ctx.font = "14px 'Arial'";
+      ctx.fillStyle = "#f60";
+      ctx.fillRect(125, 1, 62, 20);
+      ctx.fillStyle = "#069";
+      ctx.fillText("Bänkskiva 🪨", 2, 15);
+      ctx.fillStyle = "rgba(102,204,0,0.7)";
+      ctx.fillText("Bänkskiva 🪨", 4, 17);
+      canvasHash = c.toDataURL().slice(-50);
+    } catch {}
+
+    // WebGL renderer
+    let webgl = "";
+    try {
+      const gl = document.createElement("canvas").getContext("webgl");
+      const dbg = gl?.getExtension("WEBGL_debug_renderer_info");
+      if (dbg) webgl = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL).slice(0, 30);
+    } catch {}
+
     const parts = [
-      nav.language,
-      `${screen.width}x${screen.height}`,
-      screen.colorDepth,
-      tz,
-      nav.platform || "",
-      nav.hardwareConcurrency || "",
-      nav.deviceMemory || "",
+      nav.language, nav.languages?.join(",") || "",
+      `${scr.width}x${scr.height}`, scr.colorDepth, scr.pixelDepth,
+      tz, nav.platform || "",
+      nav.hardwareConcurrency || "", nav.deviceMemory || "",
       nav.cookieEnabled ? 1 : 0,
       typeof window.TouchEvent !== "undefined" ? 1 : 0,
+      canvasHash, webgl,
+      nav.maxTouchPoints || 0,
+      Intl.NumberFormat().resolvedOptions().locale,
     ];
-    // Simple hash
+
     const str = parts.join("|");
     let h = 0;
     for (let i = 0; i < str.length; i++) { h = Math.imul(31, h) + str.charCodeAt(i) | 0; }
+
     _fp = {
-      hash: (h >>> 0).toString(16),
-      lang: nav.language,
-      screen: `${screen.width}x${screen.height}`,
+      hash:   (h >>> 0).toString(16),
+      lang:   nav.language,
+      screen: `${scr.width}x${scr.height}`,
       tz,
       mobile: /Mobi|Android/i.test(nav.userAgent),
-      cores: nav.hardwareConcurrency,
+      cores:  nav.hardwareConcurrency,
+      webgl:  webgl || null,
     };
   } catch { _fp = {}; }
   return _fp;
