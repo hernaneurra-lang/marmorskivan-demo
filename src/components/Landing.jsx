@@ -196,6 +196,15 @@ export default function Landing() {
             {t("common.brand", { defaultValue: "marmorskivan.se" })}
           </a>
 
+          <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-gray-700">
+            <a href="/material/marmor" className="hover:text-emerald-700 transition-colors">
+              {t("nav.materials", { defaultValue: "Våra material" })}
+            </a>
+            <a href="/boka-tid" className="hover:text-emerald-700 transition-colors">
+              {t("nav.book", { defaultValue: "Boka möte" })}
+            </a>
+          </nav>
+
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -205,21 +214,22 @@ export default function Landing() {
             >
               {siteSettings.nav_cta_text || t("common.ctaCalculate", { defaultValue: "Begär offert" })}
             </button>
-            <div className="flex items-center gap-2 text-sm font-semibold">
+
+            {/* Language toggle */}
+            <div className="flex items-center gap-1 text-sm font-semibold border rounded-lg overflow-hidden">
               <button
                 type="button"
-                className={uiLang === "sv" ? "underline" : ""}
                 onClick={() => setLang("sv")}
+                className={`px-2 py-1 transition-colors ${uiLang === "sv" ? "bg-emerald-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
               >
-                {t("lang.sv", { defaultValue: "SV" })}
+                SV
               </button>
-              <span aria-hidden="true">|</span>
               <button
                 type="button"
-                className={uiLang === "en" ? "underline" : ""}
                 onClick={() => setLang("en")}
+                className={`px-2 py-1 transition-colors ${uiLang === "en" ? "bg-emerald-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
               >
-                {t("lang.en", { defaultValue: "EN" })}
+                EN
               </button>
             </div>
           </div>

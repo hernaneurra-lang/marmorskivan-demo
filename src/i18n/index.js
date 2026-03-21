@@ -131,11 +131,8 @@ function detectInitialLanguage() {
     // no-op
   }
 
-  try {
-    return normalizeLang(navigator.language || "sv");
-  } catch {
-    return "sv";
-  }
+  // Default to Swedish regardless of browser language
+  return "sv";
 }
 
 i18n.use(initReactI18next).init({
