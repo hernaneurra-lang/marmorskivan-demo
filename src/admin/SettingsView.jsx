@@ -212,6 +212,19 @@ export default function SettingsView({ headers, apiBase }) {
                 ))}
               </div>
             </div>
+            <TextField
+              label="Bot-avatar bild-URL (åsidosätter emoji)"
+              value={settings.chat_bot_avatar_url || ""}
+              onChange={set("chat_bot_avatar_url")}
+              placeholder="https://example.com/bot-avatar.jpg"
+            />
+            {settings.chat_bot_avatar_url && (
+              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <img src={settings.chat_bot_avatar_url} alt="Bot preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} onError={(e) => { e.target.style.display = "none"; }} />
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Förhandsgranskning</span>
+                <button onClick={() => set("chat_bot_avatar_url")("")} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>✕ Ta bort</button>
+              </div>
+            )}
           </Section>
 
           {/* Agent profile */}
@@ -223,7 +236,7 @@ export default function SettingsView({ headers, apiBase }) {
               placeholder="Kundtjänst"
             />
             <div style={{ marginBottom: 16 }}>
-              <Label>Agent-avatar</Label>
+              <Label>Agent-avatar (emoji)</Label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {AGENT_AVATARS.map((em) => (
                   <button
@@ -241,6 +254,19 @@ export default function SettingsView({ headers, apiBase }) {
                 ))}
               </div>
             </div>
+            <TextField
+              label="Agent-avatar bild-URL (åsidosätter emoji)"
+              value={settings.agent_avatar_url || ""}
+              onChange={set("agent_avatar_url")}
+              placeholder="https://example.com/agent-photo.jpg"
+            />
+            {settings.agent_avatar_url && (
+              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <img src={settings.agent_avatar_url} alt="Agent preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} onError={(e) => { e.target.style.display = "none"; }} />
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Förhandsgranskning</span>
+                <button onClick={() => set("agent_avatar_url")("")} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>✕ Ta bort</button>
+              </div>
+            )}
             <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--muted)" }}>
               Agent-svar du skickar via Chattar-vyn visas med detta namn och denna avatar hos kunden i realtid.
             </div>

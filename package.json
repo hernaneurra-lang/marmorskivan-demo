@@ -24,6 +24,7 @@
     "jsdom": "^26.1.0",
     "lucide-react": "^0.542.0",
     "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.3",
     "openai": "^5.20.1",
     "pg": "^8.13.0",
     "react": "^18.3.1",

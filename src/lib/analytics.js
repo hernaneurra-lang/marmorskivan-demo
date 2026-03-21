@@ -8,6 +8,41 @@ let pageEntryTime = Date.now();
 let currentPage = null;
 let maxScrollDepth = 0;
 
+// ── Browser fingerprint (lightweight, privacy-safe) ──
+let _fp = null;
+function getFingerprint() {
+  if (_fp) return _fp;
+  try {
+    const nav = navigator;
+    const screen = window.screen;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const parts = [
+      nav.language,
+      `${screen.width}x${screen.height}`,
+      screen.colorDepth,
+      tz,
+      nav.platform || "",
+      nav.hardwareConcurrency || "",
+      nav.deviceMemory || "",
+      nav.cookieEnabled ? 1 : 0,
+      typeof window.TouchEvent !== "undefined" ? 1 : 0,
+    ];
+    // Simple hash
+    const str = parts.join("|");
+    let h = 0;
+    for (let i = 0; i < str.length; i++) { h = Math.imul(31, h) + str.charCodeAt(i) | 0; }
+    _fp = {
+      hash: (h >>> 0).toString(16),
+      lang: nav.language,
+      screen: `${screen.width}x${screen.height}`,
+      tz,
+      mobile: /Mobi|Android/i.test(nav.userAgent),
+      cores: nav.hardwareConcurrency,
+    };
+  } catch { _fp = {}; }
+  return _fp;
+}
+
 function getOrCreateSession() {
   if (sessionId) return sessionId;
   try {
@@ -31,6 +66,7 @@ function send(event, data = {}) {
     session: getOrCreateSession(),
     page: currentPage || location.pathname,
     ts: Date.now(),
+    fp: getFingerprint(),
     ...data,
   };
   try {

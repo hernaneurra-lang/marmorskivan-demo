@@ -88,9 +88,23 @@ export async function migrate() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS bookings (
+      id SERIAL PRIMARY KEY,
+      booking_date DATE NOT NULL,
+      booking_time TEXT NOT NULL,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT,
+      message TEXT,
+      session_id TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id);
     CREATE INDEX IF NOT EXISTS analytics_events_created_idx ON analytics_events(created_at);
     CREATE INDEX IF NOT EXISTS analytics_events_event_idx ON analytics_events(event);
+    CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings(booking_date);
   `);
 
   // Safe column additions for existing deployments
@@ -98,6 +112,20 @@ export async function migrate() {
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open';
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'normal';
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS note TEXT;
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT 'bot';
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS country TEXT;
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS country_code TEXT;
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS region TEXT;
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '[]';
+  `);
+  await db.query(`
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS country TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS fp_hash TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS screen TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS lang TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS mobile BOOLEAN;
   `);
 
   // Seed default site settings if not present

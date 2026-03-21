@@ -1,5 +1,11 @@
-// src/admin/AnalyticsView.jsx — Enhanced analytics with period filter, funnel, visual charts
+// src/admin/AnalyticsView.jsx — Enhanced analytics with period filter, funnel, geo, visual charts
 import { useState, useEffect, useCallback } from "react";
+
+const FLAG_BASE = "https://flagcdn.com/16x12";
+function CountryFlag({ code }) {
+  if (!code) return null;
+  return <img src={`${FLAG_BASE}/${code.toLowerCase()}.png`} alt={code} width={16} height={12} style={{ marginRight: 6, borderRadius: 2, verticalAlign: "middle" }} onError={(e) => { e.target.style.display = "none"; }} />;
+}
 
 function StatCard({ icon, value, label, color }) {
   return (
@@ -66,6 +72,61 @@ function FunnelViz({ funnel }) {
   );
 }
 
+// ── AI Insights generator (client-side, from analytics data) ──
+function generateInsights(data) {
+  if (!data) return [];
+  const insights = [];
+  const pv = Number(data.totalPageViews || 0);
+  const chats = Number(data.chatSessions || 0);
+  const offers = Number(data.offerSubmits || 0);
+  const contacts = Number(data.totalContacts || 0);
+  const calc = Number(data.calculatorOpens || 0);
+  const handovers = Number(data.handoverSessions || 0);
+
+  // Chat engagement rate
+  if (pv > 0 && chats > 0) {
+    const chatRate = Math.round(chats / pv * 100);
+    if (chatRate >= 10) insights.push({ icon: "🚀", text: `Hög chattengagemang — ${chatRate}% av besökarna startar en chatt. Branschsnitt är ~5%.` });
+    else if (chatRate < 3) insights.push({ icon: "💡", text: `Låg chattengagemang (${chatRate}%). Prova att ändra hälsningsmeddelandet eller visa chatten mer proaktivt.` });
+  }
+
+  // Funnel drop-offs
+  if (calc > 0 && offers === 0) {
+    insights.push({ icon: "⚠️", text: `${calc} öppnade kalkylatorn men ingen skickade offert. Trolig friktion — kolla om offertformuläret är tydligt.` });
+  } else if (calc > 0 && offers > 0) {
+    const convRate = Math.round(offers / calc * 100);
+    if (convRate >= 20) insights.push({ icon: "✅", text: `Stark kalkylator-till-offert-konvertering: ${convRate}%. Kalkylatorn fungerar bra som lead-generator.` });
+    else if (convRate < 8) insights.push({ icon: "💡", text: `Låg konvertering kalkylator → offert (${convRate}%). Prova ett mer synligt CTA-steg i kalkylatorn.` });
+  }
+
+  // Handover ratio
+  if (chats > 0 && handovers > 0) {
+    const hRate = Math.round(handovers / chats * 100);
+    if (hRate > 30) insights.push({ icon: "🤝", text: `${hRate}% av chattar eskaleras till human agent. AI:n kanske inte täcker alla vanliga frågor — utöka kunskapsbasen.` });
+  }
+
+  // Contact quality
+  if (contacts > 0 && offers > 0) {
+    const quality = Math.round(contacts / offers * 100);
+    if (quality >= 50) insights.push({ icon: "📞", text: `${quality}% av offertintresserade lämnar kontaktuppgifter — stark köpintention.` });
+  }
+
+  // Top geo insight
+  if (data.geoCountries?.length > 0) {
+    const top = data.geoCountries[0];
+    if (top && Number(top.sessions) > 1) insights.push({ icon: "🌍", text: `Majoriteten av besökarna (${Number(top.sessions).toLocaleString("sv-SE")}) kommer från ${top.country}. Vill du rikta content mot dem?` });
+  }
+
+  // Top page insight
+  if (data.topPages?.length > 0) {
+    const top = data.topPages[0];
+    if (top) insights.push({ icon: "📄", text: `Populäraste sidan: "${top.page}" med ${Number(top.views).toLocaleString("sv-SE")} visningar. Bra plats för CTA eller specialerbjudande.` });
+  }
+
+  if (!insights.length) insights.push({ icon: "📊", text: "Inte tillräckligt med data ännu för automatiska insikter. Kom tillbaka när trafiken ökat." });
+  return insights;
+}
+
 export default function AnalyticsView({ headers, apiBase }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -116,12 +177,13 @@ export default function AnalyticsView({ headers, apiBase }) {
           <>
             {/* KPI cards */}
             <div className="admin-kpi-grid">
-              <StatCard icon="👁️" value={data?.totalPageViews}  label="Sidvisningar"       color="#3b82f6" />
-              <StatCard icon="🧑" value={data?.uniqueSessions}  label="Unika sessioner"    color="#6366f1" />
-              <StatCard icon="💬" value={data?.chatSessions}    label="Chattsessioner"     color="#8b5cf6" />
-              <StatCard icon="🧮" value={data?.calculatorOpens} label="Kalkylator öppnad"  color="#f59e0b" />
-              <StatCard icon="📋" value={data?.offerSubmits}    label="Offerter begärda"   color="#ef4444" />
-              <StatCard icon="📞" value={data?.totalContacts}   label="Kontaktbegäran"     color="#10b981" />
+              <StatCard icon="👁️" value={data?.totalPageViews}    label="Sidvisningar"       color="#3b82f6" />
+              <StatCard icon="🧑" value={data?.uniqueSessions}    label="Unika sessioner"    color="#6366f1" />
+              <StatCard icon="💬" value={data?.chatSessions}      label="Chattsessioner"     color="#8b5cf6" />
+              <StatCard icon="🧮" value={data?.calculatorOpens}   label="Kalkylator öppnad"  color="#f59e0b" />
+              <StatCard icon="📋" value={data?.offerSubmits}      label="Offerter begärda"   color="#ef4444" />
+              <StatCard icon="📞" value={data?.totalContacts}     label="Kontaktbegäran"     color="#10b981" />
+              <StatCard icon="🤝" value={data?.handoverSessions}  label="Handover till agent" color="#06b6d4" />
             </div>
 
             {/* Funnel + Top pages */}
@@ -187,6 +249,107 @@ export default function AnalyticsView({ headers, apiBase }) {
                   </ul>
                 ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data</div>}
               </div>
+            </div>
+
+            {/* Geo analytics */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <div className="admin-card">
+                <div className="admin-card-title">🌍 Besökare per land</div>
+                {data?.geoCountries?.length ? (
+                  <ul className="analytics-list bar-list">
+                    {data.geoCountries.map((g, i) => {
+                      const max = Math.max(...data.geoCountries.map((x) => Number(x.sessions)), 1);
+                      return (
+                        <li key={i} style={{ flexDirection: "column", gap: 4, padding: "8px 0" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <span style={{ fontSize: 12, color: "var(--text)", display: "flex", alignItems: "center" }}>
+                              <CountryFlag code={g.country_code} />
+                              {g.country}
+                            </span>
+                            <span className="count">{Number(g.sessions).toLocaleString("sv-SE")}</span>
+                          </div>
+                          <div style={{ height: 4, background: "var(--border)", borderRadius: 2 }}>
+                            <div style={{ height: 4, background: "var(--green)", borderRadius: 2, width: `${Math.round(Number(g.sessions) / max * 100)}%`, transition: "width 0.4s ease" }} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen geo-data ännu (kräver aktiva chattar)</div>}
+              </div>
+
+              <div className="admin-card">
+                <div className="admin-card-title">🏙️ Populäraste städer</div>
+                {data?.geoCities?.length ? (
+                  <ul className="analytics-list bar-list">
+                    {data.geoCities.map((g, i) => {
+                      const max = Math.max(...data.geoCities.map((x) => Number(x.sessions)), 1);
+                      return (
+                        <li key={i} style={{ flexDirection: "column", gap: 4, padding: "8px 0" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <span style={{ fontSize: 12, color: "var(--text)" }}>
+                              {g.city} <span style={{ color: "var(--muted)" }}>· {g.country}</span>
+                            </span>
+                            <span className="count">{Number(g.sessions).toLocaleString("sv-SE")}</span>
+                          </div>
+                          <div style={{ height: 4, background: "var(--border)", borderRadius: 2 }}>
+                            <div style={{ height: 4, background: "#6366f1", borderRadius: 2, width: `${Math.round(Number(g.sessions) / max * 100)}%`, transition: "width 0.4s ease" }} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen geo-data ännu</div>}
+              </div>
+            </div>
+
+            {/* Device breakdown */}
+            {data?.deviceStats && (data.deviceStats.mobile > 0 || data.deviceStats.desktop > 0) && (
+              <div className="admin-card">
+                <div className="admin-card-title">📱 Enheter</div>
+                <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+                  {[
+                    { label: "📱 Mobil", value: data.deviceStats.mobile, color: "#8b5cf6" },
+                    { label: "🖥️ Desktop", value: data.deviceStats.desktop, color: "#3b82f6" },
+                    { label: "🔑 Unika enheter", value: data.deviceStats.uniqueDevices, color: "#10b981" },
+                  ].map((d) => (
+                    <div key={d.label} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: d.color }}>{Number(d.value).toLocaleString("sv-SE")}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>{d.label}</div>
+                    </div>
+                  ))}
+                  {(data.deviceStats.mobile + data.deviceStats.desktop) > 0 && (
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Mobil vs Desktop</div>
+                      <div style={{ height: 8, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{
+                          height: "100%",
+                          width: `${Math.round(data.deviceStats.mobile / (data.deviceStats.mobile + data.deviceStats.desktop) * 100)}%`,
+                          background: "#8b5cf6",
+                          borderRadius: 4,
+                        }} />
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--muted)", marginTop: 3 }}>
+                        <span>📱 {Math.round(data.deviceStats.mobile / (data.deviceStats.mobile + data.deviceStats.desktop) * 100)}%</span>
+                        <span>{Math.round(data.deviceStats.desktop / (data.deviceStats.mobile + data.deviceStats.desktop) * 100)}% 🖥️</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* AI Insights */}
+            <div className="admin-card">
+              <div className="admin-card-title">🤖 AI-insikter</div>
+              <ul className="insights-list">
+                {generateInsights(data).map((ins, i) => (
+                  <li key={i} className="insight-item">
+                    <span style={{ fontSize: 16, marginRight: 8 }}>{ins.icon}</span>
+                    {ins.text}
+                  </li>
+                ))}
+              </ul>
             </div>
           </>
         )}

@@ -4,12 +4,58 @@ import cors from "cors";
 import { OpenAI } from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
+import nodemailer from "nodemailer";
 import { query, migrate } from "./db.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "marmorskivan-admin";
 const HAS_DB = Boolean(process.env.DATABASE_URL);
+const COMPANY_EMAIL = process.env.COMPANY_EMAIL || "";
+const HAS_EMAIL = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+// ── Email transporter (nodemailer) ──
+let mailer = null;
+function getMailer() {
+  if (!HAS_EMAIL) return null;
+  if (!mailer) {
+    mailer = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+  }
+  return mailer;
+}
+
+async function sendMail(opts) {
+  const t = getMailer();
+  if (!t) return;
+  try {
+    await t.sendMail({ from: `Marmorskivan <${process.env.SMTP_USER}>`, ...opts });
+  } catch (e) {
+    console.error("[email] send failed:", e.message);
+  }
+}
+
+function makeIcs(date, time, name) {
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const pad = (n) => String(n).padStart(2, "0");
+  const dt  = `${y}${pad(m)}${pad(d)}T${pad(h)}${pad(mi)}00`;
+  const dt2 = `${y}${pad(m)}${pad(d)}T${pad(h + 1)}${pad(mi)}00`;
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Marmorskivan//SE",
+    "BEGIN:VEVENT",
+    `DTSTART:${dt}`,
+    `DTEND:${dt2}`,
+    `SUMMARY:Mätningsbesök – Marmorskivan`,
+    `DESCRIPTION:Mätningsbesök bokat för ${name}`,
+    `LOCATION:Marmorskivan`,
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+}
 
 // ── CORS — allow marmorskivan.se + localhost dev ──
 const ALLOWED_ORIGINS = [
@@ -69,6 +115,28 @@ function getOpenAI() {
   return openai;
 }
 
+// ── Geo lookup (ip-api.com free, no key needed) ──
+const geoCache = new Map(); // ip → { country, countryCode, city, region, ts }
+async function lookupGeo(ip) {
+  if (!ip || ip === "::1" || ip === "127.0.0.1" || ip.startsWith("192.168") || ip.startsWith("10.")) return null;
+  if (geoCache.has(ip)) {
+    const c = geoCache.get(ip);
+    if (Date.now() - c.ts < 3_600_000) return c; // cache 1h
+  }
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,zip,lat,lon`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (d.status !== "success") return null;
+    const geo = { country: d.country, countryCode: d.countryCode, city: d.city, region: d.regionName, zip: d.zip, lat: d.lat, lon: d.lon, ts: Date.now() };
+    geoCache.set(ip, geo);
+    return geo;
+  } catch { return null; }
+}
+
+// ── In-memory typing state ──
+const typingState = new Map(); // sessionId → { ts }
+
 const SYSTEM_PROMPT = `Du är en hjälpsam kundtjänstassistent för marmorskivan.se — en svensk e-handel för steniga bänkskivor (marmor, granit, kvartskomposit, kalksten, travertin, terrazzo, onyx m.m.).
 
 Svara alltid på svenska. Var kort och konkret — max 3-4 meningar per svar om inget annat krävs.
@@ -86,10 +154,12 @@ Om du inte vet svaret, hänvisa kunden till att ringa eller lämna sina kontaktu
 async function ensureSession(sessionId, page, ip) {
   if (!HAS_DB || !sessionId) return;
   try {
+    const geo = await lookupGeo(ip);
     await query(
-      `INSERT INTO chat_sessions (id, page, ip) VALUES ($1, $2, $3)
+      `INSERT INTO chat_sessions (id, page, ip, country, country_code, city, region)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (id) DO UPDATE SET last_message_at = NOW()`,
-      [sessionId, page || null, ip || null]
+      [sessionId, page || null, ip || null, geo?.country || null, geo?.countryCode || null, geo?.city || null, geo?.region || null]
     );
   } catch (e) {
     console.error("[db] ensureSession:", e.message);
@@ -111,6 +181,25 @@ async function saveMessage(sessionId, role, content) {
 // ── Health check (Railway uses this) ──
 app.get("/health", (_req, res) => res.json({ ok: true, db: HAS_DB }));
 
+// ── Knowledge base keyword matcher ──
+async function findKbMatch(message) {
+  if (!HAS_DB) return null;
+  try {
+    const { rows } = await query(`SELECT question, answer FROM knowledge_base WHERE active = true`);
+    if (!rows.length) return null;
+    const lower = message.toLowerCase();
+    // Score each entry by how many words from the question appear in the message
+    let best = null, bestScore = 0;
+    for (const row of rows) {
+      const words = row.question.toLowerCase().replace(/[?!.,]/g, "").split(/\s+/).filter((w) => w.length > 3);
+      const score = words.filter((w) => lower.includes(w)).length;
+      const ratio = words.length ? score / words.length : 0;
+      if (score >= 2 && ratio >= 0.5 && score > bestScore) { best = row; bestScore = score; }
+    }
+    return best;
+  } catch { return null; }
+}
+
 // ── Chat ──
 app.post("/api/chat", rateLimit(20), async (req, res) => {
   const { message, history = [], sessionId, page } = req.body || {};
@@ -121,13 +210,56 @@ app.post("/api/chat", rateLimit(20), async (req, res) => {
   await ensureSession(sessionId, page, ip);
   await saveMessage(sessionId, "user", message);
 
+  // ── First-message alert to company ──
+  if (COMPANY_EMAIL && HAS_DB && sessionId) {
+    try {
+      const { rows: msgRows } = await query(`SELECT COUNT(*) AS cnt FROM chat_messages WHERE session_id = $1 AND sender = 'user'`, [sessionId]);
+      if (parseInt(msgRows[0]?.cnt) === 1) {
+        sendMail({
+          to: COMPANY_EMAIL,
+          subject: `Ny chatt på Marmorskivan`,
+          text: `En ny kund har startat en chatt.\n\nSida: ${page || "-"}\nMeddelande: ${message}\n\nLogga in i admin-panelen för att svara.`,
+        });
+      }
+    } catch {}
+  }
+
+  // ── If session is in agent mode, don't call AI — agent replies manually ──
+  if (HAS_DB && sessionId) {
+    try {
+      const { rows } = await query(`SELECT mode FROM chat_sessions WHERE id = $1`, [sessionId]);
+      if (rows[0]?.mode === "agent") {
+        return res.json({ reply: null, mode: "agent" });
+      }
+    } catch {}
+  }
+
+  // ── Try knowledge base keyword match first ──
+  const kbMatch = await findKbMatch(message);
+  if (kbMatch) {
+    await saveMessage(sessionId, "assistant", kbMatch.answer);
+    return res.json({ reply: kbMatch.answer, source: "kb" });
+  }
+
+  // ── Fall back to OpenAI ──
   try {
+    // Enrich system prompt with active knowledge base entries
+    let kbContext = "";
+    if (HAS_DB) {
+      try {
+        const { rows: kbRows } = await query(`SELECT question, answer FROM knowledge_base WHERE active = true LIMIT 30`);
+        if (kbRows.length) {
+          kbContext = "\n\nKunskapsbas (använd dessa svar när de är relevanta):\n" +
+            kbRows.map((r) => `F: ${r.question}\nS: ${r.answer}`).join("\n\n");
+        }
+      } catch {}
+    }
     const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       max_tokens: 300,
       temperature: 0.7,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: SYSTEM_PROMPT + kbContext },
         ...history.slice(-8).map((m) => ({ role: m.role, content: String(m.content).slice(0, 500) })),
         { role: "user", content: message },
       ],
@@ -190,14 +322,44 @@ app.get("/api/chat/messages/:sessionId", rateLimit(60), async (req, res) => {
   }
 });
 
+// ── Customer typing ──
+app.post("/api/chat/typing", rateLimit(120), (req, res) => {
+  const { sessionId } = req.body || {};
+  if (sessionId) typingState.set(sessionId, { ts: Date.now() });
+  res.json({ ok: true });
+});
+
+// ── Customer polls for session mode (bot → agent handover) ──
+app.get("/api/chat/sessions/:sessionId/mode", rateLimit(60), async (req, res) => {
+  if (!HAS_DB) return res.json({ mode: "bot" });
+  try {
+    const { rows } = await query(`SELECT mode FROM chat_sessions WHERE id = $1`, [req.params.sessionId]);
+    res.json({ mode: rows[0]?.mode || "bot" });
+  } catch { res.json({ mode: "bot" }); }
+});
+
 // ── Analytics ──
 app.post("/api/analytics", async (req, res) => {
   try {
-    const { event, session, page, ts, ...rest } = req.body || {};
+    const { event, session, page, ts, fp, ...rest } = req.body || {};
     if (HAS_DB && event) {
+      const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
+      const geo = await lookupGeo(ip);
       await query(
-        `INSERT INTO analytics_events (event, session_id, page, data) VALUES ($1, $2, $3, $4)`,
-        [event, session || null, page || null, JSON.stringify({ ts, ...rest })]
+        `INSERT INTO analytics_events (event, session_id, page, data, country, city, fp_hash, screen, lang, mobile)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          event,
+          session || null,
+          page || null,
+          JSON.stringify({ ts, ...rest }),
+          geo?.country || null,
+          geo?.city || null,
+          fp?.hash || null,
+          fp?.screen || null,
+          fp?.lang || null,
+          fp?.mobile ?? null,
+        ]
       );
     }
   } catch {}
@@ -237,6 +399,11 @@ app.get("/api/admin/sessions", adminAuth, async (req, res) => {
         s.status,
         s.priority,
         s.note,
+        s.mode,
+        s.country,
+        s.country_code,
+        s.city,
+        s.tags,
         s.created_at,
         s.last_message_at,
         COUNT(m.id) AS message_count,
@@ -269,7 +436,7 @@ app.get("/api/admin/sessions/:id/messages", adminAuth, async (req, res) => {
       [req.params.id]
     );
     const { rows: sessions } = await query(
-      `SELECT id, page, ip, status, priority, note, created_at FROM chat_sessions WHERE id = $1`,
+      `SELECT id, page, ip, status, priority, note, mode, country, country_code, city, region, tags, created_at FROM chat_sessions WHERE id = $1`,
       [req.params.id]
     );
     res.json({ messages, contact: contacts[0] || null, session: sessions[0] || null });
@@ -295,6 +462,32 @@ app.post("/api/admin/sessions/:id/reply", adminAuth, async (req, res) => {
     console.error("[admin] reply:", e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Admin: handover (bot → agent) ──
+app.post("/api/admin/sessions/:id/handover", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  try {
+    await query(`UPDATE chat_sessions SET mode = 'agent' WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: check if customer is typing ──
+app.get("/api/admin/sessions/:id/typing", adminAuth, (req, res) => {
+  const state = typingState.get(req.params.id);
+  const typing = Boolean(state && Date.now() - state.ts < 5000);
+  res.json({ typing });
+});
+
+// ── Admin: update session tags ──
+app.patch("/api/admin/sessions/:id/tags", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const { tags } = req.body || {};
+  try {
+    await query(`UPDATE chat_sessions SET tags = $1 WHERE id = $2`, [JSON.stringify(tags || []), req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── Admin: update session status/priority/note ──
@@ -356,6 +549,7 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       pageViews, uniqueSessions, chatSessions, contacts,
       calculatorOpens, offerSubmits,
       topPages, topEvents, dailyChats, popularQuestions,
+      geoCountries, geoCities, handoverSessions, deviceStats,
     ] = await Promise.all([
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(DISTINCT session_id) AS total FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL`),
@@ -384,6 +578,27 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
         FROM chat_messages WHERE role = 'user' AND created_at > NOW() - INTERVAL '${interval}'
         GROUP BY content ORDER BY count DESC LIMIT 10
       `),
+      query(`
+        SELECT country, country_code, COUNT(*) AS sessions
+        FROM chat_sessions
+        WHERE created_at > NOW() - INTERVAL '${interval}' AND country IS NOT NULL
+        GROUP BY country, country_code ORDER BY sessions DESC LIMIT 15
+      `),
+      query(`
+        SELECT city, country, COUNT(*) AS sessions
+        FROM chat_sessions
+        WHERE created_at > NOW() - INTERVAL '${interval}' AND city IS NOT NULL
+        GROUP BY city, country ORDER BY sessions DESC LIMIT 15
+      `),
+      query(`SELECT COUNT(*) AS total FROM chat_sessions WHERE mode = 'agent' AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`
+        SELECT
+          SUM(CASE WHEN mobile = true THEN 1 ELSE 0 END) AS mobile_count,
+          SUM(CASE WHEN mobile = false THEN 1 ELSE 0 END) AS desktop_count,
+          COUNT(DISTINCT fp_hash) AS unique_devices
+        FROM analytics_events
+        WHERE created_at > NOW() - INTERVAL '${interval}' AND fp_hash IS NOT NULL
+      `),
     ]);
 
     const pv   = Number(pageViews.rows[0]?.total || 0);
@@ -399,6 +614,7 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       totalContacts:     cont,
       calculatorOpens:   calc,
       offerSubmits:      offer,
+      handoverSessions:  Number(handoverSessions.rows[0]?.total || 0),
       funnel: [
         { label: "Sidvisningar",          value: pv,    pct: 100 },
         { label: "Kalkylator öppnad",      value: calc,  pct: pv  ? Math.round(calc  / pv  * 100) : 0 },
@@ -409,6 +625,13 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       topEvents:         topEvents.rows,
       dailyChats:        dailyChats.rows,
       popularQuestions:  popularQuestions.rows,
+      geoCountries:      geoCountries.rows,
+      geoCities:         geoCities.rows,
+      deviceStats: {
+        mobile:        Number(deviceStats.rows[0]?.mobile_count || 0),
+        desktop:       Number(deviceStats.rows[0]?.desktop_count || 0),
+        uniqueDevices: Number(deviceStats.rows[0]?.unique_devices || 0),
+      },
     });
   } catch (e) {
     console.error("[admin] analytics:", e.message);
@@ -533,6 +756,87 @@ app.delete("/api/admin/knowledge-base/:id", adminAuth, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Public: create booking ──
+app.post("/api/bookings", rateLimit(5), async (req, res) => {
+  const { date, time, name, phone, email, message, sessionId } = req.body || {};
+  if (!date || !time || !name || !phone) return res.status(400).json({ error: "date, time, name and phone required" });
+
+  let bookingId = null;
+  if (HAS_DB) {
+    try {
+      const { rows } = await query(`SELECT id FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status != 'cancelled'`, [date, time]);
+      if (rows.length) return res.status(409).json({ error: "time_taken" });
+      const { rows: created } = await query(
+        `INSERT INTO bookings (booking_date, booking_time, name, phone, email, message, session_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+        [date, time, name, phone, email || null, message || null, sessionId || null]
+      );
+      bookingId = created[0].id;
+    } catch (e) { console.error("[booking] create:", e.message); return res.status(500).json({ error: e.message }); }
+  }
+
+  // Send emails (fire-and-forget)
+  const ics = makeIcs(date, time, name);
+  const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+  const attachments = [{ filename: "bokning.ics", content: ics, contentType: "text/calendar" }];
+
+  // Confirmation to customer
+  if (email) {
+    sendMail({
+      to: email,
+      subject: `Bokningsbekräftelse – ${dateLabel} kl ${time}`,
+      text: `Hej ${name}!\n\nDin bokning för mätningsbesök är mottagen.\n\nDatum: ${dateLabel}\nTid: ${time}\n\nVi bekräftar din tid via telefon (${phone}). Välkommen!\n\nMarmorskivan`,
+      html: `<p>Hej <strong>${name}</strong>!</p><p>Din bokning för mätningsbesök är mottagen.</p><p><strong>Datum:</strong> ${dateLabel}<br><strong>Tid:</strong> ${time}</p><p>Vi bekräftar din tid via telefon (${phone}). Välkommen!</p><p>— Marmorskivan</p>`,
+      attachments,
+    });
+  }
+
+  // Notification to company
+  if (COMPANY_EMAIL) {
+    sendMail({
+      to: COMPANY_EMAIL,
+      subject: `Ny bokning: ${name} – ${dateLabel} kl ${time}`,
+      text: `Ny mätningsbokning:\n\nNamn: ${name}\nTelefon: ${phone}\nE-post: ${email || "-"}\nDatum: ${dateLabel}\nTid: ${time}${message ? `\nÖvrigt: ${message}` : ""}\n\nBoknings-ID: #${bookingId || "-"}`,
+      attachments,
+    });
+  }
+
+  res.json({ ok: true, id: bookingId });
+});
+
+// ── Public: get booked slots for a date ──
+app.get("/api/bookings/slots", rateLimit(30), async (req, res) => {
+  const { date } = req.query;
+  if (!date) return res.status(400).json({ error: "date required" });
+  if (!HAS_DB) return res.json({ booked: [] });
+  try {
+    const { rows } = await query(`SELECT booking_time FROM bookings WHERE booking_date = $1 AND status != 'cancelled'`, [date]);
+    res.json({ booked: rows.map((r) => r.booking_time) });
+  } catch { res.json({ booked: [] }); }
+});
+
+// ── Admin: list bookings ──
+app.get("/api/admin/bookings", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ bookings: [] });
+  const { status, date } = req.query;
+  try {
+    let where = "1=1"; const params = [];
+    if (status) { params.push(status); where += ` AND status = $${params.length}`; }
+    if (date)   { params.push(date);   where += ` AND booking_date = $${params.length}`; }
+    const { rows } = await query(`SELECT * FROM bookings WHERE ${where} ORDER BY booking_date ASC, booking_time ASC LIMIT 200`, params);
+    res.json({ bookings: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Admin: update booking status ──
+app.patch("/api/admin/bookings/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const { status } = req.body || {};
+  try {
+    await query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ── Admin: CSV exports ──

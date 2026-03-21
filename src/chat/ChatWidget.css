@@ -102,6 +102,21 @@
   background: #10b981;
   box-shadow: 0 0 10px rgba(16,185,129,0.6);
 }
+.ms-status-dot.offline {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245,158,11,0.5);
+}
+.ms-offline-notice {
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #fbbf24;
+  line-height: 1.4;
+  text-align: center;
+  margin-bottom: 8px;
+}
 .ms-chat-brand {
   font-size: 13px; font-weight: 800;
   letter-spacing: 0.06em;
