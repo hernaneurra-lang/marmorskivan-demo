@@ -524,6 +524,38 @@ app.patch("/api/admin/sessions/:id", adminAuth, async (req, res) => {
   }
 });
 
+// ── Admin: delete single session ──
+app.delete("/api/admin/sessions/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  try {
+    await query(`DELETE FROM chat_messages WHERE session_id = $1`, [req.params.id]);
+    await query(`DELETE FROM chat_sessions WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: bulk delete old resolved sessions ──
+app.delete("/api/admin/sessions", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true, deleted: 0 });
+  const days = Math.max(1, parseInt(req.query.days) || 30);
+  try {
+    const old = await query(
+      `SELECT id FROM chat_sessions WHERE status = 'resolved' AND created_at < NOW() - ($1 || ' days')::INTERVAL`,
+      [days]
+    );
+    const ids = old.rows.map((r) => r.id);
+    if (ids.length) {
+      await query(`DELETE FROM chat_messages WHERE session_id = ANY($1)`, [ids]);
+      await query(`DELETE FROM chat_sessions WHERE id = ANY($1)`, [ids]);
+    }
+    res.json({ ok: true, deleted: ids.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Admin: contacts list ──
 app.get("/api/admin/contacts", adminAuth, async (req, res) => {
   if (!HAS_DB) return res.json({ contacts: [] });

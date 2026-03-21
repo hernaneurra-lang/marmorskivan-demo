@@ -171,6 +171,12 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
     });
   };
 
+  const deleteSession = async () => {
+    if (!window.confirm("Radera denna chatt permanent? Det går inte att ångra.")) return;
+    await fetch(`${apiBase}/api/admin/sessions/${session.id}`, { method: "DELETE", headers });
+    onUpdated?.();
+  };
+
   if (!session) {
     return (
       <div className="empty-state" style={{ flex: 1 }}>
@@ -248,9 +254,19 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
           </button>
         )}
 
-        <div style={{ fontSize: 11, color: "var(--muted)", marginLeft: "auto", textAlign: "right", flexShrink: 0, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "right", flexShrink: 0, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
           {sessionInfo.city && sessionInfo.country ? `📍 ${sessionInfo.city}, ${sessionInfo.country}` : session.page}
         </div>
+
+        {/* Delete session */}
+        <button
+          className="btn-refresh"
+          onClick={deleteSession}
+          style={{ flexShrink: 0, fontSize: 12, color: "#ef4444", borderColor: "#ef4444" }}
+          title="Radera chatt permanent"
+        >
+          🗑
+        </button>
       </div>
 
       {/* Contact info if present */}
@@ -448,6 +464,7 @@ export default function SessionsView({ headers, apiBase }) {
   const [filter, setFilter] = useState("all");
   const [cannedResponses, setCannedResponses] = useState([]);
   const [kbItems, setKbItems] = useState([]);
+  const [cleanDays, setCleanDays] = useState(30);
   const prevSessionIds = useRef(new Set());
 
   const load = useCallback(async () => {
@@ -528,6 +545,29 @@ export default function SessionsView({ headers, apiBase }) {
             </button>
           ))}
           <button className="btn-refresh" onClick={load}>↻</button>
+          <select
+            className="admin-select"
+            style={{ fontSize: 11, padding: "3px 6px", marginBottom: 0 }}
+            value={cleanDays}
+            onChange={(e) => setCleanDays(Number(e.target.value))}
+          >
+            <option value={7}>7 dagar</option>
+            <option value={30}>30 dagar</option>
+            <option value={90}>90 dagar</option>
+          </select>
+          <button
+            className="btn-refresh"
+            style={{ fontSize: 11, color: "#ef4444", borderColor: "#ef4444", whiteSpace: "nowrap" }}
+            onClick={async () => {
+              if (!window.confirm(`Radera alla avslutade chattar äldre än ${cleanDays} dagar?`)) return;
+              const r = await fetch(`${apiBase}/api/admin/sessions?days=${cleanDays}`, { method: "DELETE", headers });
+              const j = await r.json();
+              alert(`${j.deleted} chattar raderade.`);
+              load();
+            }}
+          >
+            🗑 Rensa gamla
+          </button>
         </div>
       </div>
 
