@@ -407,7 +407,13 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
         <textarea
           className="reply-input"
           value={reply}
-          onChange={(e) => setReply(e.target.value)}
+          onChange={(e) => {
+            setReply(e.target.value);
+            // Notify customer that agent is typing
+            fetch(`${apiBase}/api/admin/sessions/${session.id}/typing`, {
+              method: "POST", headers,
+            }).catch(() => {});
+          }}
           placeholder="Skriv ett manuellt svar till kunden…"
           rows={2}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
@@ -420,6 +426,20 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
   );
 }
 
+// Tiny audio beep via Web Audio API — no file needed
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
+  } catch {}
+}
+
 export default function SessionsView({ headers, apiBase }) {
   const [sessions, setSessions] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -428,6 +448,7 @@ export default function SessionsView({ headers, apiBase }) {
   const [filter, setFilter] = useState("all");
   const [cannedResponses, setCannedResponses] = useState([]);
   const [kbItems, setKbItems] = useState([]);
+  const prevSessionIds = useRef(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -436,7 +457,15 @@ export default function SessionsView({ headers, apiBase }) {
       if (search.trim()) params.set("search", search.trim());
       const res = await fetch(`${apiBase}/api/admin/sessions?${params}`, { headers });
       const json = await res.json();
-      setSessions(json.sessions || []);
+      const incoming = json.sessions || [];
+      // Sound alert for brand-new sessions
+      if (prevSessionIds.current.size > 0) {
+        incoming.forEach((s) => {
+          if (!prevSessionIds.current.has(s.id)) playBeep();
+        });
+      }
+      prevSessionIds.current = new Set(incoming.map((s) => s.id));
+      setSessions(incoming);
     } finally {
       setLoading(false);
     }
@@ -461,6 +490,12 @@ export default function SessionsView({ headers, apiBase }) {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadCanned(); }, [loadCanned]);
   useEffect(() => { loadKb(); }, [loadKb]);
+
+  // Auto-poll sessions every 15s so new chats appear without manual refresh
+  useEffect(() => {
+    const t = setInterval(load, 15_000);
+    return () => clearInterval(t);
+  }, [load]);
 
   const FILTERS = [
     { value: "all",      label: "Alla" },

@@ -57,6 +57,50 @@
       content="https://marmorskivan.se/hero/stone-kitchen.jpg"
     />
 
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "marmorskivan.se",
+      "description": "Måttbeställda bänkskivor i granit, marmor, kvartskomposit och keramik. Egna montörer i Mälardalen.",
+      "url": "https://marmorskivan.se",
+      "logo": "https://marmorskivan.se/images/favicon/icon-192.png",
+      "image": "https://marmorskivan.se/hero/stone-kitchen.jpg",
+      "email": "info@marmorskivan.se",
+      "areaServed": {
+        "@type": "GeoCircle",
+        "geoMidpoint": { "@type": "GeoCoordinates", "latitude": 59.3293, "longitude": 18.0686 },
+        "geoRadius": "100000"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "SE",
+        "addressRegion": "Stockholm"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+          "opens": "08:00",
+          "closes": "17:00"
+        }
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Bänkskivor i sten",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Bänkskiva i Granit" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Bänkskiva i Marmor" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Bänkskiva i Kvartskomposit" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Bänkskiva i Keramik/Dekton" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Bänkskiva i Kvartsit" } }
+        ]
+      },
+      "sameAs": ["https://www.instagram.com/marmorskivan"]
+    }
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

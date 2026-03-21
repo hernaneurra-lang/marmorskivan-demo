@@ -481,6 +481,20 @@ app.get("/api/admin/sessions/:id/typing", adminAuth, (req, res) => {
   res.json({ typing });
 });
 
+// ── Admin: set agent typing indicator (customer will see) ──
+const agentTypingState = new Map(); // sessionId → { ts }
+app.post("/api/admin/sessions/:id/typing", adminAuth, (req, res) => {
+  agentTypingState.set(req.params.id, { ts: Date.now() });
+  res.json({ ok: true });
+});
+
+// ── Public: customer polls if agent is typing ──
+app.get("/api/chat/sessions/:sessionId/agent-typing", rateLimit(120), (req, res) => {
+  const state = agentTypingState.get(req.params.sessionId);
+  const typing = Boolean(state && Date.now() - state.ts < 5000);
+  res.json({ typing });
+});
+
 // ── Admin: update session tags ──
 app.patch("/api/admin/sessions/:id/tags", adminAuth, async (req, res) => {
   if (!HAS_DB) return res.json({ ok: true });
@@ -551,6 +565,7 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       calculatorOpens, offerSubmits,
       topPages, topEvents, dailyChats, popularQuestions,
       geoCountries, geoCities, handoverSessions, deviceStats,
+      referrers, peakHours, dailyPageViews,
     ] = await Promise.all([
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(DISTINCT session_id) AS total FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL`),
@@ -594,6 +609,33 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       query(`SELECT COUNT(*) AS total FROM chat_sessions WHERE mode = 'agent' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`
         SELECT
+          CASE
+            WHEN referrer IS NULL OR referrer = '' THEN 'Direkt'
+            WHEN referrer ILIKE '%google%' THEN 'Google'
+            WHEN referrer ILIKE '%bing%' THEN 'Bing'
+            WHEN referrer ILIKE '%facebook%' OR referrer ILIKE '%fb.com%' THEN 'Facebook'
+            WHEN referrer ILIKE '%instagram%' THEN 'Instagram'
+            WHEN referrer ILIKE '%linkedin%' THEN 'LinkedIn'
+            WHEN referrer ILIKE '%marmorskivan.se%' THEN 'Intern'
+            ELSE 'Övrigt'
+          END AS source,
+          COUNT(*) AS visits
+        FROM analytics_events
+        WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY source ORDER BY visits DESC
+      `),
+      query(`
+        SELECT EXTRACT(HOUR FROM created_at AT TIME ZONE 'Europe/Stockholm') AS hour, COUNT(*) AS visits
+        FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY hour ORDER BY hour ASC
+      `),
+      query(`
+        SELECT DATE(created_at AT TIME ZONE 'Europe/Stockholm') AS day, COUNT(*) AS views
+        FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY day ORDER BY day DESC LIMIT 30
+      `),
+      query(`
+        SELECT
           SUM(CASE WHEN mobile = true THEN 1 ELSE 0 END) AS mobile_count,
           SUM(CASE WHEN mobile = false THEN 1 ELSE 0 END) AS desktop_count,
           COUNT(DISTINCT fp_hash) AS unique_devices
@@ -628,6 +670,9 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       popularQuestions:  popularQuestions.rows,
       geoCountries:      geoCountries.rows,
       geoCities:         geoCities.rows,
+      referrers:         referrers.rows,
+      peakHours:         peakHours.rows,
+      dailyPageViews:    dailyPageViews.rows,
       deviceStats: {
         mobile:        Number(deviceStats.rows[0]?.mobile_count || 0),
         desktop:       Number(deviceStats.rows[0]?.desktop_count || 0),

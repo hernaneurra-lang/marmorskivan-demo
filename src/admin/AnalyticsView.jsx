@@ -339,6 +339,67 @@ export default function AnalyticsView({ headers, apiBase }) {
               </div>
             )}
 
+            {/* Daily pageviews bar chart */}
+            <div className="admin-card">
+              <div className="admin-card-title">📈 Sidvisningar per dag</div>
+              {data?.dailyPageViews?.length ? (
+                <div className="bar-chart">
+                  {(() => {
+                    const max = Math.max(...data.dailyPageViews.map((d) => Number(d.views)), 1);
+                    return [...data.dailyPageViews].reverse().map((d) => (
+                      <div key={d.day} className="bar-col">
+                        <div
+                          className="bar-col-bar"
+                          style={{ height: `${Math.round(Number(d.views) / max * 100)}%`, background: "#3b82f6" }}
+                          title={`${d.views} visningar`}
+                        />
+                        <div className="bar-col-label">
+                          {new Date(d.day).toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data ännu</div>}
+            </div>
+
+            {/* Referrers + Peak hours */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <div className="admin-card">
+                <div className="admin-card-title">🔗 Trafikkällor</div>
+                {data?.referrers?.length ? (
+                  <BarList items={data.referrers} labelKey="source" valueKey="visits" />
+                ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data</div>}
+              </div>
+
+              <div className="admin-card">
+                <div className="admin-card-title">🕐 Trafik per timme (Stockholm)</div>
+                {data?.peakHours?.length ? (
+                  <div className="bar-chart" style={{ height: 80 }}>
+                    {(() => {
+                      const max = Math.max(...data.peakHours.map((h) => Number(h.visits)), 1);
+                      return Array.from({ length: 24 }, (_, i) => {
+                        const entry = data.peakHours.find((h) => Number(h.hour) === i);
+                        const val = entry ? Number(entry.visits) : 0;
+                        return (
+                          <div key={i} className="bar-col">
+                            <div
+                              className="bar-col-bar"
+                              style={{ height: `${Math.round(val / max * 100)}%`, background: "#f59e0b" }}
+                              title={`${i}:00 — ${val} besök`}
+                            />
+                            <div className="bar-col-label" style={{ fontSize: 8 }}>
+                              {i % 4 === 0 ? `${i}h` : ""}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data</div>}
+              </div>
+            </div>
+
             {/* AI Insights */}
             <div className="admin-card">
               <div className="admin-card-title">🤖 AI-insikter</div>

@@ -88,6 +88,7 @@ function ChatWidgetInner({ settings }) {
   const [form, setForm]         = useState({ name: "", phone: "", email: "", message: "" });
   const [unread, setUnread]     = useState(0);
   const [showBooking, setShowBooking] = useState(false);
+  const [agentTyping, setAgentTyping] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
@@ -166,6 +167,20 @@ function ChatWidgetInner({ settings }) {
       } catch {}
     };
     const t = setInterval(check, 5000);
+    return () => clearInterval(t);
+  }, []); // eslint-disable-line
+
+  // Poll for agent typing (customer sees dots when agent types)
+  useEffect(() => {
+    const sessionId = sessionRef.current?.id;
+    if (!sessionId) return;
+    const check = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/sessions/${sessionId}/agent-typing`);
+        if (res.ok) { const { typing } = await res.json(); setAgentTyping(typing); }
+      } catch {}
+    };
+    const t = setInterval(check, 2000);
     return () => clearInterval(t);
   }, []); // eslint-disable-line
 
@@ -356,6 +371,15 @@ function ChatWidgetInner({ settings }) {
                 <AvatarEl url={botAvatarUrl} emoji={botAvatar} style={{ background: accent + "22", color: accent }} />
                 <div className="ms-message-wrapper">
                   <div className="ms-message-sender">{botName}</div>
+                  <div className="ms-message-content ms-typing"><span /><span /><span /></div>
+                </div>
+              </div>
+            )}
+            {agentTyping && mode === "agent" && (
+              <div className="ms-message agent">
+                <AvatarEl url={agentAvatarUrl} emoji={agentAvatar} className="ms-chat-avatar ms-agent-avatar" />
+                <div className="ms-message-wrapper">
+                  <div className="ms-message-sender">{agentName}</div>
                   <div className="ms-message-content ms-typing"><span /><span /><span /></div>
                 </div>
               </div>
