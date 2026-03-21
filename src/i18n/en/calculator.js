@@ -211,9 +211,14 @@ export default {
     hob: { title: "Hob" },
   },
 
+  thickness: {
+    title: "Thickness",
+    subtitle: "Choose thickness for selected stone",
+  },
+
   offert: {
-    title: "Send quote request",
-    openButton: "Send quote request",
+    title: "Fill in quote request",
+    openButton: "Request quote",
     fields: {
       name: "Name *",
       email: "Email *",

@@ -302,9 +302,14 @@ export default {
     },
   },
 
+  thickness: {
+    title: "Tjocklek",
+    subtitle: "Välj tjocklek för vald sten",
+  },
+
   offert: {
-    title: "Skicka offertförfrågan",
-    openButton: "Skicka offertförfrågan",
+    title: "Fyll i offertförfrågan",
+    openButton: "Begär offert",
     fields: {
       name: "Namn *",
       email: "E-post *",
