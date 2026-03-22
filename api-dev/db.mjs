@@ -118,6 +118,8 @@ export async function migrate() {
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS city TEXT;
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS region TEXT;
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '[]';
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS agent_name TEXT;
+    ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS agent_avatar_url TEXT;
   `);
   await db.query(`
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS country TEXT;
@@ -126,6 +128,7 @@ export async function migrate() {
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS screen TEXT;
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS lang TEXT;
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS mobile BOOLEAN;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS referrer TEXT;
   `);
 
   // Seed default site settings if not present
@@ -150,6 +153,7 @@ export async function migrate() {
     ["chat_bot_avatar",   "🪨"],
     ["agent_name",        "Kundtjänst"],
     ["agent_avatar",      "🧑‍💼"],
+    ["agents_list",       "[]"],
     // Navigation & SEO
     ["nav_cta_text",      "Begär offert"],
     ["seo_title",         "Marmorskivan"],

@@ -75,6 +75,7 @@ app.use(cors({
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
 }));
 app.use(express.json({ limit: "16kb" }));
+app.use(express.text({ limit: "16kb", type: "text/plain" }));
 
 // ── Simple in-memory rate limiter (per IP, per minute) ──
 const rateLimits = new Map();
@@ -203,7 +204,7 @@ async function findKbMatch(message) {
 
 // ── Chat ──
 app.post("/api/chat", rateLimit(20), async (req, res) => {
-  const { message, history = [], sessionId, page } = req.body || {};
+  const { message, history = [], sessionId, page, lang = "sv" } = req.body || {};
   if (!message?.trim()) return res.status(400).json({ error: "message required" });
   if (message.length > 1000) return res.status(400).json({ error: "message too long" });
 
@@ -260,7 +261,7 @@ app.post("/api/chat", rateLimit(20), async (req, res) => {
       max_tokens: 300,
       temperature: 0.7,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT + kbContext },
+        { role: "system", content: SYSTEM_PROMPT + kbContext + (lang === "en" ? "\n\nIMPORTANT: The user is browsing in English. Respond in English." : "") },
         ...history.slice(-8).map((m) => ({ role: m.role, content: String(m.content).slice(0, 500) })),
         { role: "user", content: message },
       ],
@@ -334,21 +335,23 @@ app.post("/api/chat/typing", rateLimit(120), (req, res) => {
 app.get("/api/chat/sessions/:sessionId/mode", rateLimit(60), async (req, res) => {
   if (!HAS_DB) return res.json({ mode: "bot" });
   try {
-    const { rows } = await query(`SELECT mode FROM chat_sessions WHERE id = $1`, [req.params.sessionId]);
-    res.json({ mode: rows[0]?.mode || "bot" });
+    const { rows } = await query(`SELECT mode, agent_name, agent_avatar_url FROM chat_sessions WHERE id = $1`, [req.params.sessionId]);
+    const row = rows[0] || {};
+    res.json({ mode: row.mode || "bot", agent_name: row.agent_name || null, agent_avatar_url: row.agent_avatar_url || null });
   } catch { res.json({ mode: "bot" }); }
 });
 
 // ── Analytics ──
 app.post("/api/analytics", async (req, res) => {
   try {
-    const { event, session, page, ts, fp, ...rest } = req.body || {};
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+    const { event, session, page, ts, fp, referrer, ...rest } = body;
     if (HAS_DB && event) {
       const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
       const geo = await lookupGeo(ip);
       await query(
-        `INSERT INTO analytics_events (event, session_id, page, data, country, city, fp_hash, screen, lang, mobile)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        `INSERT INTO analytics_events (event, session_id, page, data, country, city, fp_hash, screen, lang, mobile, referrer)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           event,
           session || null,
@@ -360,10 +363,13 @@ app.post("/api/analytics", async (req, res) => {
           fp?.screen || null,
           fp?.lang || null,
           fp?.mobile ?? null,
+          referrer || null,
         ]
       );
     }
-  } catch {}
+  } catch (e) {
+    console.error("[analytics] error:", e.message);
+  }
   res.json({ ok: true });
 });
 
@@ -385,9 +391,10 @@ app.get("/api/admin/sessions", adminAuth, async (req, res) => {
   try {
     let where = "1=1";
     const params = [];
-    if (filter === "leads") { where += ` AND EXISTS(SELECT 1 FROM contacts WHERE session_id = s.id)`; }
-    if (filter === "open")  { where += ` AND s.status = 'open'`; }
+    if (filter === "leads")    { where += ` AND EXISTS(SELECT 1 FROM contacts WHERE session_id = s.id)`; }
+    if (filter === "open")     { where += ` AND s.status = 'open'`; }
     if (filter === "resolved") { where += ` AND s.status = 'resolved'`; }
+    if (filter === "archive")  { where += ` AND s.status = 'resolved'`; }
     if (search) {
       params.push(`%${search}%`);
       where += ` AND (s.id ILIKE $${params.length} OR s.page ILIKE $${params.length} OR s.note ILIKE $${params.length})`;
@@ -415,7 +422,7 @@ app.get("/api/admin/sessions", adminAuth, async (req, res) => {
       WHERE ${where}
       GROUP BY s.id
       ORDER BY s.last_message_at DESC
-      LIMIT 200
+      LIMIT ${filter === "archive" ? 20 : 200}
     `, params);
     res.json({ sessions: rows });
   } catch (e) {
@@ -437,7 +444,7 @@ app.get("/api/admin/sessions/:id/messages", adminAuth, async (req, res) => {
       [req.params.id]
     );
     const { rows: sessions } = await query(
-      `SELECT id, page, ip, status, priority, note, mode, country, country_code, city, region, tags, created_at FROM chat_sessions WHERE id = $1`,
+      `SELECT id, page, ip, status, priority, note, mode, country, country_code, city, region, tags, agent_name, agent_avatar_url, created_at FROM chat_sessions WHERE id = $1`,
       [req.params.id]
     );
     res.json({ messages, contact: contacts[0] || null, session: sessions[0] || null });
@@ -465,11 +472,15 @@ app.post("/api/admin/sessions/:id/reply", adminAuth, async (req, res) => {
   }
 });
 
-// ── Admin: handover (bot → agent) ──
+// ── Admin: handover (bot → agent) — accepts optional agent_name + agent_avatar_url ──
 app.post("/api/admin/sessions/:id/handover", adminAuth, async (req, res) => {
   if (!HAS_DB) return res.json({ ok: true });
+  const { agent_name, agent_avatar_url } = req.body || {};
   try {
-    await query(`UPDATE chat_sessions SET mode = 'agent' WHERE id = $1`, [req.params.id]);
+    await query(
+      `UPDATE chat_sessions SET mode = 'agent', agent_name = $2, agent_avatar_url = $3 WHERE id = $1`,
+      [req.params.id, agent_name || null, agent_avatar_url || null]
+    );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -713,6 +724,101 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
     });
   } catch (e) {
     console.error("[admin] analytics:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: seed test analytics data ──
+app.post("/api/admin/seed-analytics", adminAuth, async (_req, res) => {
+  if (!HAS_DB) return res.json({ ok: false, error: "no db" });
+  try {
+    const uid = () => Math.random().toString(36).slice(2, 10);
+    const daysAgo = (d, jitter = 0) => {
+      const t = new Date();
+      t.setDate(t.getDate() - d);
+      t.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60));
+      if (jitter) t.setMinutes(t.getMinutes() + jitter);
+      return t.toISOString();
+    };
+
+    const geoData = [
+      { country: "Sverige", country_code: "SE", city: "Stockholm" },
+      { country: "Sverige", country_code: "SE", city: "Göteborg" },
+      { country: "Sverige", country_code: "SE", city: "Malmö" },
+      { country: "Sverige", country_code: "SE", city: "Uppsala" },
+      { country: "Norge", country_code: "NO", city: "Oslo" },
+      { country: "Danmark", country_code: "DK", city: "Köpenhamn" },
+      { country: "Finland", country_code: "FI", city: "Helsingfors" },
+    ];
+    const pages = ["/", "/app", "/material/marmor", "/material/granit", "/bankskiva-sten", "/boka-tid"];
+    const questions = [
+      "Vad kostar en bänkskiva?", "Hur lång är leveranstiden?",
+      "Vilket material rekommenderar ni?", "Kan ni mäta upp hemma hos mig?",
+      "Vad är skillnaden på marmor och granit?", "Hur underhåller jag stenen?",
+    ];
+
+    // Insert 30 days of page_view events
+    for (let day = 0; day < 30; day++) {
+      const count = Math.floor(Math.random() * 15) + 5;
+      for (let i = 0; i < count; i++) {
+        const geo = geoData[Math.floor(Math.random() * geoData.length)];
+        const page = pages[Math.floor(Math.random() * pages.length)];
+        const sessionId = uid();
+        await query(
+          `INSERT INTO analytics_events (event, session_id, page, country, city, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+          ["page_view", sessionId, page, geo.country, geo.city, daysAgo(day)]
+        );
+        // Calculator opens (40% of visits)
+        if (Math.random() < 0.4) {
+          await query(
+            `INSERT INTO analytics_events (event, session_id, page, country, city, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+            ["calculator_open", sessionId, "/app", geo.country, geo.city, daysAgo(day, 3)]
+          );
+        }
+        // Offer submits (10% of visits)
+        if (Math.random() < 0.1) {
+          await query(
+            `INSERT INTO analytics_events (event, session_id, page, country, city, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+            ["offer_submit", sessionId, "/app", geo.country, geo.city, daysAgo(day, 8)]
+          );
+        }
+      }
+    }
+
+    // Insert 20 chat sessions with messages
+    for (let i = 0; i < 20; i++) {
+      const geo = geoData[Math.floor(Math.random() * geoData.length)];
+      const day = Math.floor(Math.random() * 30);
+      const sessionId = uid();
+      const status = Math.random() < 0.4 ? "resolved" : "open";
+      const mode = Math.random() < 0.2 ? "agent" : "bot";
+      await query(
+        `INSERT INTO chat_sessions (id, page, ip, status, mode, country, country_code, city) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [sessionId, "/app", "127.0.0.1", status, mode, geo.country, geo.country_code, geo.city]
+      );
+      const msgCount = Math.floor(Math.random() * 6) + 2;
+      for (let m = 0; m < msgCount; m++) {
+        const role = m % 2 === 0 ? "user" : "assistant";
+        const content = role === "user"
+          ? questions[Math.floor(Math.random() * questions.length)]
+          : "Tack för din fråga! Vi hjälper dig gärna med det.";
+        await query(
+          `INSERT INTO chat_messages (session_id, role, content, created_at) VALUES ($1,$2,$3,$4)`,
+          [sessionId, role, content, daysAgo(day, m * 2)]
+        );
+      }
+      // 30% have contact
+      if (Math.random() < 0.3) {
+        const names = ["Anna Svensson", "Erik Lindgren", "Maria Johansson", "Lars Eriksson"];
+        await query(
+          `INSERT INTO contacts (session_id, name, phone, email, message, created_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [sessionId, names[Math.floor(Math.random() * names.length)], "070-123 45 67", "kund@example.se", "Intresserad av offert", daysAgo(day)]
+        );
+      }
+    }
+
+    res.json({ ok: true, message: "Testdata inlagt (30 dagar sidvisningar + 20 chattsessioner)" });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

@@ -21,3 +21,15 @@ h1, h2, h3, h4, h5, h6 {
 .hero-image {
   filter: brightness(var(--hero-brightness));
 }
+
+.font-playfair {
+  font-family: "Playfair Display", serif;
+}
+@supports (-webkit-overflow-scrolling: touch) {
+  .ios-no-fixed {
+    background-attachment: scroll !important;
+  }
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
