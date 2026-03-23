@@ -83,7 +83,7 @@ function rateLimit(maxPerMin) {
   return (req, res, next) => {
     const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress || "unknown";
     const now = Date.now();
-    const key = `${ip}`;
+    const key = `${ip}:${req.path}`;
     const entry = rateLimits.get(key) || { count: 0, reset: now + 60_000 };
     if (now > entry.reset) { entry.count = 0; entry.reset = now + 60_000; }
     entry.count++;
