@@ -1,4 +1,7 @@
 // api-dev/server.mjs — Marmorskivan API server (Railway-ready)
+import { File as NodeFile } from "node:buffer";
+if (!globalThis.File) globalThis.File = NodeFile;
+
 import express from "express";
 import cors from "cors";
 import { OpenAI, toFile } from "openai";
