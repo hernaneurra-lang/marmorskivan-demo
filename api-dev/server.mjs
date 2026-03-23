@@ -373,6 +373,96 @@ app.post("/api/analytics", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── AI Kitchen Render (DALL-E 3 HD) ──
+function buildKitchenPrompt(materialName, shape) {
+  const n = (materialName || "").toLowerCase();
+
+  // Material type
+  let stoneDesc = "natural stone countertop";
+  if (n.includes("granit") || n.includes("granite"))
+    stoneDesc = "polished granite with natural crystalline structure and mineral flecks";
+  else if (n.includes("marmor") || n.includes("marble") || n.includes("calacatta") || n.includes("carrara") || n.includes("statuario"))
+    stoneDesc = "polished marble with elegant natural veining";
+  else if (n.includes("kvartskomposit") || n.includes("quartz") || n.includes("komposit") || n.includes("composite"))
+    stoneDesc = "engineered quartz with precise, consistent surface pattern";
+  else if (n.includes("keramik") || n.includes("dekton") || n.includes("ceramic") || n.includes("sintered"))
+    stoneDesc = "ultra-compact sintered ceramic surface, matte or polished";
+  else if (n.includes("kvartsit") || n.includes("quartzite"))
+    stoneDesc = "natural quartzite with dramatic movement and depth";
+  else if (n.includes("travertin") || n.includes("travertine"))
+    stoneDesc = "travertine with characteristic natural pores and warm texture";
+  else if (n.includes("kalksten") || n.includes("limestone"))
+    stoneDesc = "honed limestone with a sophisticated matte finish";
+
+  // Color
+  let colorDesc = "";
+  if (n.includes("absolute") || n.includes("nero") || n.includes("black") || n.includes("svart"))
+    colorDesc = "deep jet-black";
+  else if (n.includes("calacatta") || n.includes("statuario"))
+    colorDesc = "pure white with bold gold and grey veining";
+  else if (n.includes("carrara"))
+    colorDesc = "bright white with soft grey veining";
+  else if (n.includes("bianco") || n.includes("white") || n.includes("vit") || n.includes("snow"))
+    colorDesc = "brilliant white";
+  else if (n.includes("grey") || n.includes("gray") || n.includes("grå") || n.includes("grigio"))
+    colorDesc = "sophisticated medium grey";
+  else if (n.includes("beige") || n.includes("sand") || n.includes("cream") || n.includes("ivory"))
+    colorDesc = "warm ivory-beige";
+  else if (n.includes("brown") || n.includes("brun") || n.includes("cognac") || n.includes("walnut") || n.includes("wenge"))
+    colorDesc = "rich warm brown";
+  else if (n.includes("blue") || n.includes("blå") || n.includes("azul") || n.includes("sodalite"))
+    colorDesc = "deep ocean blue";
+  else if (n.includes("green") || n.includes("grön") || n.includes("verde") || n.includes("emerald"))
+    colorDesc = "rich forest green";
+  else if (n.includes("gold") || n.includes("guld") || n.includes("amber") || n.includes("honey"))
+    colorDesc = "warm amber-gold";
+
+  // Kitchen layout
+  let layoutDesc = "long straight countertop running along one wall";
+  if (shape === "L" || shape === "L+Island") layoutDesc = "elegant L-shaped countertop configuration";
+  else if (shape === "U" || shape === "U+Island") layoutDesc = "spacious U-shaped kitchen with countertops on three sides";
+  else if (shape === "Island") layoutDesc = "freestanding kitchen island as the centerpiece";
+  if (shape && shape.includes("Island") && shape !== "Island")
+    layoutDesc += ", plus a matching kitchen island in the center of the room";
+
+  const fullMaterial = [colorDesc, stoneDesc].filter(Boolean).join(" ").trim();
+  const cleanName = (materialName || "").replace(/_/g, " ");
+
+  return `Hyperrealistic architectural interior photograph of a luxury contemporary kitchen.
+
+The countertops are ${fullMaterial} — the specific material is ${cleanName}. The stone surface texture, reflectivity, and natural character are the absolute focal point of the image — crystal-sharp, photorealistic, unmistakably real.
+
+Kitchen layout: ${layoutDesc}.
+
+Design details: handleless flat-front cabinetry in matte white or warm oak, integrated flush appliances, large-format stone or concrete floor tiles, statement pendant lights, floor-to-ceiling windows flooding the space with soft Nordic daylight.
+
+Technical: shot on Phase One IQ4 150MP, 23mm tilt-shift lens, f/8, ISO 200, zero noise. Perfectly balanced exposure. No people, no text, no watermarks.
+
+Style reference: Architectural Digest, Elle Decoration Scandinavia, Dezeen — high-end residential project photography. The kind of image that makes someone immediately want this kitchen.`;
+}
+
+app.post("/api/ai-render", rateLimit(10), async (req, res) => {
+  if (!process.env.OPENAI_API_KEY)
+    return res.status(503).json({ error: "OpenAI inte konfigurerat" });
+  const { materialName, shape } = req.body || {};
+  if (!materialName) return res.status(400).json({ error: "materialName krävs" });
+  try {
+    const prompt = buildKitchenPrompt(materialName, shape);
+    const result = await getOpenAI().images.generate({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1792x1024",
+      quality: "hd",
+      style: "natural",
+    });
+    res.json({ imageUrl: result.data[0].url, revisedPrompt: result.data[0].revised_prompt });
+  } catch (e) {
+    console.error("[ai-render]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ══════════════════════════════════════════
 //  ADMIN API
 // ══════════════════════════════════════════

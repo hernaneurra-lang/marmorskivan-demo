@@ -8,6 +8,7 @@ import EdgeTreatmentSection from "../components/EdgeTreatmentSection";
 import OpeningsSection from "../components/OpeningsSection";
 import ExtraSurfacesSection from "../components/ExtraSurfacesSection";
 import SubmitBox from "../components/SubmitBox";
+import KitchenVisualizer from "../components/KitchenVisualizer";
 import { computeTotals } from "../lib/CostCalculation";
 import { parseNumberLoose } from "../lib/materialUtils";
 
@@ -563,6 +564,10 @@ function resetFormCompletely() {
           </div>
         </div>
 
+        {variant?.name && (
+          <KitchenVisualizer materialName={variant.name} shape={shape} />
+        )}
+
         <div className="rounded-2xl border p-6 bg-white shadow-md space-y-6">
           <h2 className="text-lg font-bold border-b pb-3">
             {t("calc.priceOverview.title", "Prisöversikt")}
@@ -587,7 +592,7 @@ function resetFormCompletely() {
                   {t("calc.priceOverview.blocks.execution", "Utförande")}
                 </p>
                 <p className="text-gray-900">{shapeLabel(shape)}</p>
-                <p className="text-gray-500 capitalize">
+                <p className="text-gray-700 capitalize">
                   {edgeType} {t("calc.priceOverview.polishing", "polering")}
                 </p>
               </div>
@@ -621,7 +626,7 @@ function resetFormCompletely() {
                   )}
 
                   {pickedItems.length === 0 && fallbackCutouts.length === 0 && (
-                    <li className="text-gray-500">
+                    <li className="text-gray-700">
                       {t("calc.priceOverview.noExtras", "Inga tillval valda")}
                     </li>
                   )}
@@ -648,14 +653,14 @@ function resetFormCompletely() {
 
           <div className="space-y-2 pt-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">
+              <span className="text-gray-700">
                 {t("calc.priceOverview.lines.extras", "Produkter & Tillval")}
               </span>
               <span className="font-bold">{currency(accessoriesTotal)}</span>
             </div>
 
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">
+              <span className="text-gray-700">
                 {t("calc.priceOverview.lines.stoneBundle", "Sten inkl. entreprenad*")}
               </span>
               <span className="font-bold">{currency(stoneBundle)}</span>
@@ -675,7 +680,7 @@ function resetFormCompletely() {
                 <div className="text-2xl font-black text-emerald-900 leading-none">
                   {currency(total)}
                 </div>
-                <div className="text-[10px] text-gray-400 mt-1">
+                <div className="text-[10px] text-gray-600 mt-1">
                   {t("calc.priceOverview.inclVat", "Inkl. moms")} ({currency(vat)})
                 </div>
               </div>
