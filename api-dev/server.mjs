@@ -509,8 +509,12 @@ app.post("/api/ai-render", async (req, res) => {
         ? `The countertop edge is ${mm}mm thick — a substantial, bold profile.`
         : `The countertop edge is ${mm}mm thick — a slim, elegant profile.`;
       const prompt = hasKitchen
-        ? `Replace ONLY the horizontal countertop surfaces (the flat top of counters and kitchen island) in the kitchen photo with the EXACT stone texture from the first reference image. Match the stone color, veining, and surface character precisely. ${edgeDesc} IMPORTANT: Do NOT change the cabinet fronts, drawer faces, sides of the island, walls, floor, or any vertical surfaces — only the horizontal stone tops. Keep everything else completely identical.`
-        : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. ${edgeDesc} The stone is ONLY on the horizontal countertop surfaces — not on cabinet fronts or vertical surfaces. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
+        ? `You are editing a kitchen photo. Change ONE thing only: replace the countertop stone surface (the flat horizontal top of the kitchen island/bench) with the stone texture from the reference image. ${edgeDesc}
+
+DO NOT CHANGE ANYTHING ELSE. The floor must stay exactly as it is. The cabinets stay. The walls stay. The ceiling stays. The appliances stay. The objects on the counter stay. Only the stone countertop surface itself changes material.
+
+The new countertop material must exactly match the color, veining, and texture of the reference stone image.`
+        : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. ${edgeDesc} The stone is ONLY on the horizontal countertop surfaces — not on the floor, not on cabinet fronts, not on walls. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
 
       const result = await getOpenAI().images.edit({
         model: "gpt-image-1",
