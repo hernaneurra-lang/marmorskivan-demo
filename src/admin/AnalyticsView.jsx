@@ -264,6 +264,19 @@ export default function AnalyticsView({ headers, apiBase }) {
             </button>
           ))}
           <button className="btn-refresh" onClick={load}>↻</button>
+          <button
+            className="btn-refresh"
+            style={{ fontSize: 11, color: "var(--green)", borderColor: "var(--green)", whiteSpace: "nowrap" }}
+            onClick={async () => {
+              if (!window.confirm("Seeda in 30 dagars testdata? (Kan dupliceras om du kör igen)")) return;
+              const r = await fetch(`${apiBase}/api/admin/seed-analytics`, { method: "POST", headers });
+              const j = await r.json();
+              alert(j.message || (j.ok ? "Klart!" : j.error));
+              load();
+            }}
+          >
+            🌱 Seeda testdata
+          </button>
         </div>
       </div>
 
@@ -281,6 +294,7 @@ export default function AnalyticsView({ headers, apiBase }) {
               <StatCard icon="📋" value={data?.offerSubmits}      label="Offerter begärda"   color="#ef4444" />
               <StatCard icon="📞" value={data?.totalContacts}     label="Kontaktbegäran"     color="#10b981" />
               <StatCard icon="🤝" value={data?.handoverSessions}  label="Handover till agent" color="#06b6d4" />
+              <StatCard icon="✨" value={data?.kitchenRenders}    label="Köksrenderingar"     color="#a855f7" />
             </div>
 
             {/* Funnel + Top pages */}

@@ -1,6 +1,6 @@
 // Path: src/components/Landing.jsx
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { heroTiles } from "../config/site";
 import Modal from "./modal";
@@ -197,9 +197,6 @@ export default function Landing() {
           </a>
 
           <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-gray-700">
-            <a href="/material/marmor" className="hover:text-emerald-700 transition-colors">
-              {t("nav.materials", { defaultValue: "Våra material" })}
-            </a>
             <a href="/boka-tid" className="hover:text-emerald-700 transition-colors">
               {t("nav.book", { defaultValue: "Boka möte" })}
             </a>
@@ -239,10 +236,10 @@ export default function Landing() {
       <section className="relative z-10 min-h-[50vh] flex items-center justify-center text-center px-6 py-20 md:py-28">
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-            {siteSettings.hero_title || t("landing.hero.title")}
+            {uiLang === "sv" ? (siteSettings.hero_title || t("landing.hero.title")) : t("landing.hero.title")}
           </h1>
           <p className="mt-4 text-lg text-gray-700">
-            {siteSettings.hero_subtitle || t("landing.hero.desc")}
+            {uiLang === "sv" ? (siteSettings.hero_subtitle || t("landing.hero.desc")) : t("landing.hero.desc")}
           </p>
           <button
             type="button"
@@ -250,17 +247,43 @@ export default function Landing() {
             style={{ backgroundColor: siteSettings.accent_color }}
             className="mt-8 px-6 py-3 rounded-xl text-white font-semibold shadow transition-all active:scale-95 hover:opacity-90"
           >
-            {siteSettings.hero_cta || t("common.ctaCalculate")}
+            {uiLang === "sv" ? (siteSettings.hero_cta || t("common.ctaCalculate")) : t("common.ctaCalculate")}
           </button>
 
           {/* Deal-banner */}
           {siteSettings.deal_visible !== "false" && (
             <div className="mt-6 animate-soft-pulse">
               <p className="text-emerald-800 font-medium text-sm md:text-base bg-emerald-50/60 py-1.5 px-5 rounded-full inline-block border border-emerald-100 shadow-sm">
-                ✨ {siteSettings.deal_text || weeklyMessage}
+                ✨ {uiLang === "sv" ? (siteSettings.deal_text || weeklyMessage) : weeklyMessage}
               </p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── AI Visualizer promo banner ── */}
+      <section className="relative z-10 bg-gradient-to-r from-emerald-700 to-emerald-600 border-y border-emerald-500">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">✨</span>
+            <div>
+              <span className="text-white font-semibold text-sm">
+                {uiLang === "sv" ? "Ny: Se vald bänkskiva direkt i ditt kök" : "New: See your chosen worktop in your own kitchen"}
+              </span>
+              <span className="hidden sm:inline text-emerald-100 text-sm ml-2">
+                {uiLang === "sv"
+                  ? "— ladda upp ett foto av ditt kök så byts bänkskivorna ut mot valt material"
+                  : "— upload a kitchen photo and the worktop is replaced with your chosen material"}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={goToApp}
+            className="flex-shrink-0 px-4 py-2 bg-white text-emerald-700 text-sm font-bold rounded-xl hover:bg-emerald-50 transition shadow-sm whitespace-nowrap"
+          >
+            {uiLang === "sv" ? "Prova gratis →" : "Try for free →"}
+          </button>
         </div>
       </section>
 

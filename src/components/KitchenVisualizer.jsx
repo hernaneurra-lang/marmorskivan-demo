@@ -1,6 +1,7 @@
 // src/components/KitchenVisualizer.jsx
 import { useState, useEffect, useRef } from "react";
 import { Sparkles, X, Download, RefreshCw, ChevronRight, Clock, Upload, ImagePlus, Trash2 } from "lucide-react";
+import { trackEvent } from "../lib/analytics";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 const COOLDOWN_SECS = 60;
@@ -111,6 +112,7 @@ export default function KitchenVisualizer({ materialName, materialImage, shape, 
       setState("done");
       setCooldown(COOLDOWN_SECS);
       setOpen(true);
+      trackEvent("kitchen_render", { material: materialName, mode, shape, thicknessMm });
     } catch (e) {
       setErrorMsg(e.message || "Något gick fel");
       setState("error");

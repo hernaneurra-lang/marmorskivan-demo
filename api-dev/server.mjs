@@ -787,7 +787,7 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       calculatorOpens, offerSubmits,
       topPages, topEvents, dailyChats, popularQuestions,
       geoCountries, geoCities, handoverSessions, deviceStats,
-      referrers, peakHours, dailyPageViews,
+      referrers, peakHours, dailyPageViews, kitchenRenders,
     ] = await Promise.all([
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(DISTINCT session_id) AS total FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL`),
@@ -864,6 +864,7 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
         FROM analytics_events
         WHERE created_at > NOW() - INTERVAL '${interval}' AND fp_hash IS NOT NULL
       `),
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'kitchen_render' AND created_at > NOW() - INTERVAL '${interval}'`),
     ]);
 
     const pv   = Number(pageViews.rows[0]?.total || 0);
@@ -880,6 +881,7 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       calculatorOpens:   calc,
       offerSubmits:      offer,
       handoverSessions:  Number(handoverSessions.rows[0]?.total || 0),
+      kitchenRenders:    Number(kitchenRenders.rows[0]?.total || 0),
       funnel: [
         { label: "Sidvisningar",          value: pv,    pct: 100 },
         { label: "Kalkylator öppnad",      value: calc,  pct: pv  ? Math.round(calc  / pv  * 100) : 0 },
