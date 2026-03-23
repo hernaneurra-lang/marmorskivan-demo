@@ -565,7 +565,11 @@ function resetFormCompletely() {
         </div>
 
         {variant?.name && (
-          <KitchenVisualizer materialName={variant.name} shape={shape} />
+          <KitchenVisualizer
+            materialName={variant.name}
+            materialImage={variant.image || null}
+            shape={shape}
+          />
         )}
 
         <div className="rounded-2xl border p-6 bg-white shadow-md space-y-6">

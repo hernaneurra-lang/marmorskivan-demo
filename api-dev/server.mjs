@@ -1,7 +1,7 @@
 // api-dev/server.mjs — Marmorskivan API server (Railway-ready)
 import express from "express";
 import cors from "cors";
-import { OpenAI } from "openai";
+import { OpenAI, toFile } from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
 import nodemailer from "nodemailer";
@@ -74,7 +74,7 @@ app.use(cors({
   },
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
 }));
-app.use(express.json({ limit: "16kb" }));
+app.use(express.json({ limit: "20mb" }));
 app.use(express.text({ limit: "16kb", type: "text/plain" }));
 
 // ── Simple in-memory rate limiter (per IP, per minute) ──
@@ -470,19 +470,71 @@ app.post("/api/ai-render", async (req, res) => {
     return res.status(429).json({ error: "cooldown", message: `Vänta ${secsLeft} sekunder innan nästa rendering.`, secsLeft });
   }
 
+  const { materialName, shape, materialImageUrl, kitchenPhotoBase64 } = req.body || {};
+
   activeRenders.add(ip);
   try {
-    const prompt = buildKitchenPrompt(materialName, shape);
-    const result = await getOpenAI().images.generate({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size: "1792x1024",
-      quality: "hd",
-      style: "natural",
-    });
+    let imageUrl;
+
+    if (materialImageUrl) {
+      // ── gpt-image-1: use actual material texture image ──
+      const images = [];
+
+      // Fetch material texture from our CDN
+      const matAbsUrl = materialImageUrl.startsWith("http")
+        ? materialImageUrl
+        : `https://marmorskivan.se${materialImageUrl}`;
+      const matRes = await fetch(matAbsUrl);
+      if (matRes.ok) {
+        const matBuf = Buffer.from(await matRes.arrayBuffer());
+        const ext = matAbsUrl.split(".").pop()?.split("?")[0]?.toLowerCase() || "jpg";
+        const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+        images.push(await toFile(matBuf, `material.${ext}`, { type: mime }));
+      }
+
+      // Optional: user's own kitchen photo
+      if (kitchenPhotoBase64) {
+        const b64 = kitchenPhotoBase64.replace(/^data:[^;]+;base64,/, "");
+        const kitBuf = Buffer.from(b64, "base64");
+        images.push(await toFile(kitBuf, "kitchen.jpg", { type: "image/jpeg" }));
+      }
+
+      if (images.length === 0) throw new Error("Kunde inte hämta materialbild");
+
+      const hasKitchen = Boolean(kitchenPhotoBase64);
+      const cleanName = (materialName || "").replace(/_/g, " ");
+      const prompt = hasKitchen
+        ? `Replace ALL countertop surfaces in the kitchen photo (last image) with the EXACT stone texture from the first image. Match the stone color, veining, and surface character precisely. Keep the kitchen layout, cabinets, appliances, lighting, walls and floor completely unchanged. Only the countertop material changes.`
+        : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
+
+      const result = await getOpenAI().images.edit({
+        model: "gpt-image-1",
+        image: images.length === 1 ? images[0] : images,
+        prompt,
+        size: "1536x1024",
+        quality: "high",
+        input_fidelity: "high",
+      });
+
+      const b64out = result.data[0].b64_json;
+      imageUrl = `data:image/png;base64,${b64out}`;
+
+    } else {
+      // ── Fallback: DALL-E 3 text-only ──
+      const prompt = buildKitchenPrompt(materialName, shape);
+      const result = await getOpenAI().images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1792x1024",
+        quality: "hd",
+        style: "natural",
+      });
+      imageUrl = result.data[0].url;
+    }
+
     renderCooldowns.set(ip, Date.now() + RENDER_COOLDOWN_MS);
-    res.json({ imageUrl: result.data[0].url, revisedPrompt: result.data[0].revised_prompt });
+    res.json({ imageUrl });
   } catch (e) {
     console.error("[ai-render]", e.message);
     res.status(500).json({ error: e.message });
