@@ -455,7 +455,7 @@ app.post("/api/ai-render", async (req, res) => {
     return res.status(503).json({ error: "OpenAI inte konfigurerat" });
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-  const { materialName, shape } = req.body || {};
+  const { materialName, shape, materialImageUrl, kitchenPhotoBase64 } = req.body || {};
   if (!materialName) return res.status(400).json({ error: "materialName krävs" });
 
   // Block if already rendering
@@ -469,8 +469,6 @@ app.post("/api/ai-render", async (req, res) => {
     const secsLeft = Math.ceil((cooldownUntil - now) / 1000);
     return res.status(429).json({ error: "cooldown", message: `Vänta ${secsLeft} sekunder innan nästa rendering.`, secsLeft });
   }
-
-  const { materialName, shape, materialImageUrl, kitchenPhotoBase64 } = req.body || {};
 
   activeRenders.add(ip);
   try {
