@@ -430,15 +430,19 @@ function buildKitchenPrompt(materialName, shape) {
 
   return `Hyperrealistic architectural interior photograph of a luxury contemporary kitchen.
 
-The countertops are ${fullMaterial} — the specific material is ${cleanName}. The stone surface texture, reflectivity, and natural character are the absolute focal point of the image — crystal-sharp, photorealistic, unmistakably real.
+EVERY single countertop surface in the kitchen — wall countertops, island top, and any other horizontal stone surface — is covered with ${fullMaterial} (${cleanName}). All countertops use the exact same stone material with no exceptions.
+
+CRITICAL: Each countertop is a single continuous stone slab — NOT tiles, NOT panels, NOT segments. One unbroken piece of stone per surface, just like real premium stone countertops. The slab edges are sharp and clean with a slight polished bevel. No grout lines, no joints, no seams from tiling.
 
 Kitchen layout: ${layoutDesc}.
 
-Design details: handleless flat-front cabinetry in matte white or warm oak, integrated flush appliances, large-format stone or concrete floor tiles, statement pendant lights, floor-to-ceiling windows flooding the space with soft Nordic daylight.
+The stone texture, veining, and surface character are photorealistic and prominently visible. Correct light reflection for this material type.
 
-Technical: shot on Phase One IQ4 150MP, 23mm tilt-shift lens, f/8, ISO 200, zero noise. Perfectly balanced exposure. No people, no text, no watermarks.
+Design details: handleless flat-front cabinetry in matte white or warm oak, integrated flush appliances, large-format floor tiles (NOT stone — plain concrete or porcelain), statement pendant lights, floor-to-ceiling windows with soft Nordic daylight.
 
-Style reference: Architectural Digest, Elle Decoration Scandinavia, Dezeen — high-end residential project photography. The kind of image that makes someone immediately want this kitchen.`;
+Technical: Phase One IQ4 150MP, 23mm tilt-shift, f/8, ISO 200. No people, no text, no watermarks.
+
+Style: Architectural Digest, Elle Decoration Scandinavia — the image makes someone immediately want this exact kitchen.`;
 }
 
 app.post("/api/ai-render", rateLimit(10), async (req, res) => {
