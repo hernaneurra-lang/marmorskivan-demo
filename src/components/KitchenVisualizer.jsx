@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 const COOLDOWN_SECS = 60;
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10 MB
 
-export default function KitchenVisualizer({ materialName, materialImage, shape }) {
+export default function KitchenVisualizer({ materialName, materialImage, shape, thicknessMm }) {
   const [state, setState] = useState("idle");
   const [imageUrl, setImageUrl] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -91,6 +91,7 @@ export default function KitchenVisualizer({ materialName, materialImage, shape }
       const body = {
         materialName,
         shape,
+        thicknessMm: thicknessMm || 20,
         materialImageUrl: materialImage || null,
         kitchenPhotoBase64: kitchenPhoto?.dataUrl || null,
       };

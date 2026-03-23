@@ -569,6 +569,7 @@ function resetFormCompletely() {
             materialName={variant.name}
             materialImage={variant.image || null}
             shape={shape}
+            thicknessMm={thicknessMm}
           />
         )}
 

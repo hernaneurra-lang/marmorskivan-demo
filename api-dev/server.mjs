@@ -458,7 +458,7 @@ app.post("/api/ai-render", async (req, res) => {
     return res.status(503).json({ error: "OpenAI inte konfigurerat" });
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-  const { materialName, shape, materialImageUrl, kitchenPhotoBase64 } = req.body || {};
+  const { materialName, shape, thicknessMm, materialImageUrl, kitchenPhotoBase64 } = req.body || {};
   if (!materialName) return res.status(400).json({ error: "materialName krävs" });
 
   // Block if already rendering
@@ -504,9 +504,13 @@ app.post("/api/ai-render", async (req, res) => {
 
       const hasKitchen = Boolean(kitchenPhotoBase64);
       const cleanName = (materialName || "").replace(/_/g, " ");
+      const mm = Number(thicknessMm) || 20;
+      const edgeDesc = mm >= 30
+        ? `The countertop edge is ${mm}mm thick — a substantial, bold profile.`
+        : `The countertop edge is ${mm}mm thick — a slim, elegant profile.`;
       const prompt = hasKitchen
-        ? `Replace ALL countertop surfaces in the kitchen photo (last image) with the EXACT stone texture from the first image. Match the stone color, veining, and surface character precisely. Keep the kitchen layout, cabinets, appliances, lighting, walls and floor completely unchanged. Only the countertop material changes.`
-        : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
+        ? `Replace ONLY the horizontal countertop surfaces (the flat top of counters and kitchen island) in the kitchen photo with the EXACT stone texture from the first reference image. Match the stone color, veining, and surface character precisely. ${edgeDesc} IMPORTANT: Do NOT change the cabinet fronts, drawer faces, sides of the island, walls, floor, or any vertical surfaces — only the horizontal stone tops. Keep everything else completely identical.`
+        : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. ${edgeDesc} The stone is ONLY on the horizontal countertop surfaces — not on cabinet fronts or vertical surfaces. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
 
       const result = await getOpenAI().images.edit({
         model: "gpt-image-1",
