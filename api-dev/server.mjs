@@ -445,11 +445,32 @@ Technical: Phase One IQ4 150MP, 23mm tilt-shift, f/8, ISO 200. No people, no tex
 Style: Architectural Digest, Elle Decoration Scandinavia — the image makes someone immediately want this exact kitchen.`;
 }
 
-app.post("/api/ai-render", rateLimit(10), async (req, res) => {
+// Track active renders and cooldowns per IP
+const activeRenders = new Set();
+const renderCooldowns = new Map(); // ip → timestamp when cooldown expires
+const RENDER_COOLDOWN_MS = 60_000; // 60 sec between renders per IP
+
+app.post("/api/ai-render", async (req, res) => {
   if (!process.env.OPENAI_API_KEY)
     return res.status(503).json({ error: "OpenAI inte konfigurerat" });
+
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
   const { materialName, shape } = req.body || {};
   if (!materialName) return res.status(400).json({ error: "materialName krävs" });
+
+  // Block if already rendering
+  if (activeRenders.has(ip))
+    return res.status(429).json({ error: "render_in_progress", message: "En rendering pågår redan, vänta tills den är klar." });
+
+  // Enforce cooldown between renders
+  const cooldownUntil = renderCooldowns.get(ip) || 0;
+  const now = Date.now();
+  if (now < cooldownUntil) {
+    const secsLeft = Math.ceil((cooldownUntil - now) / 1000);
+    return res.status(429).json({ error: "cooldown", message: `Vänta ${secsLeft} sekunder innan nästa rendering.`, secsLeft });
+  }
+
+  activeRenders.add(ip);
   try {
     const prompt = buildKitchenPrompt(materialName, shape);
     const result = await getOpenAI().images.generate({
@@ -460,10 +481,13 @@ app.post("/api/ai-render", rateLimit(10), async (req, res) => {
       quality: "hd",
       style: "natural",
     });
+    renderCooldowns.set(ip, Date.now() + RENDER_COOLDOWN_MS);
     res.json({ imageUrl: result.data[0].url, revisedPrompt: result.data[0].revised_prompt });
   } catch (e) {
     console.error("[ai-render]", e.message);
     res.status(500).json({ error: e.message });
+  } finally {
+    activeRenders.delete(ip);
   }
 });
 

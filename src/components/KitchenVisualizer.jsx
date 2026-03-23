@@ -1,14 +1,39 @@
 // src/components/KitchenVisualizer.jsx
-import { useState, useEffect } from "react";
-import { Sparkles, X, Download, RefreshCw, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Sparkles, X, Download, RefreshCw, ChevronRight, Clock } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
+const COOLDOWN_SECS = 60;
 
 export default function KitchenVisualizer({ materialName, shape }) {
   const [state, setState] = useState("idle"); // idle | loading | done | error
   const [imageUrl, setImageUrl] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [open, setOpen] = useState(false);
+  const [cooldown, setCooldown] = useState(0); // seconds remaining
+  const [elapsed, setElapsed] = useState(0);   // seconds since render started
+  const cooldownRef = useRef(null);
+  const elapsedRef = useRef(null);
+
+  // Cooldown countdown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    cooldownRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) { clearInterval(cooldownRef.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(cooldownRef.current);
+  }, [cooldown > 0]);
+
+  // Elapsed time while loading
+  useEffect(() => {
+    if (state !== "loading") { clearInterval(elapsedRef.current); setElapsed(0); return; }
+    setElapsed(0);
+    elapsedRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(elapsedRef.current);
+  }, [state]);
 
   // Prevent body scroll when modal open
   useEffect(() => {
@@ -34,6 +59,7 @@ export default function KitchenVisualizer({ materialName, shape }) {
   }, [open]);
 
   async function generate() {
+    if (state === "loading" || cooldown > 0) return;
     setState("loading");
     setErrorMsg(null);
     try {
@@ -43,9 +69,16 @@ export default function KitchenVisualizer({ materialName, shape }) {
         body: JSON.stringify({ materialName, shape }),
       });
       const data = await res.json();
+      if (res.status === 429) {
+        // Cooldown or in-progress from server
+        const secs = data.secsLeft || (data.error === "render_in_progress" ? 0 : COOLDOWN_SECS);
+        if (secs > 0) setCooldown(secs);
+        throw new Error(data.message || "För många förfrågningar, försök igen snart.");
+      }
       if (!res.ok || !data.imageUrl) throw new Error(data.error || "Okänt fel");
       setImageUrl(data.imageUrl);
       setState("done");
+      setCooldown(COOLDOWN_SECS);
       setOpen(true);
     } catch (e) {
       setErrorMsg(e.message || "Något gick fel");
@@ -55,10 +88,11 @@ export default function KitchenVisualizer({ materialName, shape }) {
   }
 
   const cleanName = (materialName || "").replace(/_/g, " ");
+  const isLocked = state === "loading" || cooldown > 0 || !materialName;
 
   return (
     <>
-      {/* ── Trigger button ── */}
+      {/* ── Trigger card ── */}
       <div className="rounded-2xl border bg-gradient-to-br from-stone-50 to-white p-5 shadow-sm">
         <div className="flex items-start gap-3 mb-4">
           <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
@@ -79,7 +113,7 @@ export default function KitchenVisualizer({ materialName, shape }) {
 
         <button
           onClick={generate}
-          disabled={state === "loading" || !materialName}
+          disabled={isLocked}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
                      bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800
                      text-white text-sm font-semibold shadow-md
@@ -87,8 +121,13 @@ export default function KitchenVisualizer({ materialName, shape }) {
         >
           {state === "loading" ? (
             <>
-              <RefreshCw size={15} className="animate-spin" />
-              Skapar rendering… (~15 sek)
+              <RefreshCw size={15} className="animate-spin flex-shrink-0" />
+              <span>Skapar rendering… {elapsed > 0 && `(${elapsed}s)`}</span>
+            </>
+          ) : cooldown > 0 ? (
+            <>
+              <Clock size={15} className="flex-shrink-0" />
+              <span>Vänta {cooldown}s innan nästa rendering</span>
             </>
           ) : (
             <>
@@ -99,7 +138,42 @@ export default function KitchenVisualizer({ materialName, shape }) {
           )}
         </button>
 
-        {state === "done" && imageUrl && (
+        {/* Progress bar during loading */}
+        {state === "loading" && (
+          <div className="mt-3">
+            <div className="h-1 bg-stone-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                style={{ width: `${Math.min((elapsed / 20) * 100, 90)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5 text-center">
+              DALL·E 3 HD — vanligtvis 15–20 sekunder
+            </p>
+          </div>
+        )}
+
+        {/* Cooldown bar */}
+        {cooldown > 0 && state !== "loading" && (
+          <div className="mt-3">
+            <div className="h-1 bg-stone-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-amber-400 rounded-full transition-all duration-1000"
+                style={{ width: `${(cooldown / COOLDOWN_SECS) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {state === "done" && imageUrl && cooldown === 0 && (
+          <button
+            onClick={() => setOpen(true)}
+            className="w-full mt-2 text-xs text-emerald-700 hover:text-emerald-800 font-medium text-center py-1"
+          >
+            Visa senaste rendering →
+          </button>
+        )}
+        {state === "done" && imageUrl && cooldown > 0 && (
           <button
             onClick={() => setOpen(true)}
             className="w-full mt-2 text-xs text-emerald-700 hover:text-emerald-800 font-medium text-center py-1"
@@ -112,7 +186,6 @@ export default function KitchenVisualizer({ materialName, shape }) {
       {/* ── Full-screen modal ── */}
       {open && (
         <div className="fixed inset-0 z-[1200] flex flex-col bg-black">
-          {/* Top bar */}
           <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm flex-shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-emerald-400" />
@@ -135,10 +208,11 @@ export default function KitchenVisualizer({ materialName, shape }) {
                   </a>
                   <button
                     onClick={() => { setOpen(false); generate(); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition"
+                    disabled={cooldown > 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <RefreshCw size={13} />
-                    Ny bild
+                    {cooldown > 0 ? `Ny bild om ${cooldown}s` : "Ny bild"}
                   </button>
                 </>
               )}
@@ -151,12 +225,21 @@ export default function KitchenVisualizer({ materialName, shape }) {
             </div>
           </div>
 
-          {/* Image area */}
           <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
             {state === "loading" && (
-              <div className="flex flex-col items-center gap-4 text-white">
+              <div className="flex flex-col items-center gap-5 text-white max-w-xs text-center">
                 <div className="w-12 h-12 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm text-gray-300">DALL·E 3 HD — skapar fotorealistisk köksmiljö…</p>
+                <div>
+                  <p className="font-semibold mb-1">Genererar din köksbild…</p>
+                  <p className="text-sm text-gray-400">DALL·E 3 HD arbetar — vanligtvis 15–20 sekunder</p>
+                </div>
+                <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-400 rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.min((elapsed / 20) * 100, 90)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">{elapsed}s</p>
               </div>
             )}
 
@@ -173,21 +256,25 @@ export default function KitchenVisualizer({ materialName, shape }) {
               <div className="flex flex-col items-center gap-4 text-center max-w-sm">
                 <p className="text-white font-semibold">Något gick fel</p>
                 <p className="text-gray-400 text-sm">{errorMsg}</p>
-                <button
-                  onClick={() => { setOpen(false); generate(); }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium"
-                >
-                  Försök igen
-                </button>
+                {cooldown === 0 && (
+                  <button
+                    onClick={() => { setOpen(false); generate(); }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium"
+                  >
+                    Försök igen
+                  </button>
+                )}
+                {cooldown > 0 && (
+                  <p className="text-gray-500 text-xs">Försök igen om {cooldown} sekunder</p>
+                )}
               </div>
             )}
           </div>
 
-          {/* Bottom label */}
           {state === "done" && (
             <div className="px-4 py-3 bg-black/60 text-center flex-shrink-0">
               <p className="text-xs text-gray-400">
-                AI-genererad visualisering — representerar materialet {cleanName} i en kökskontext
+                AI-genererad visualisering av {cleanName} — inte ett foto av faktisk produkt
               </p>
             </div>
           )}
