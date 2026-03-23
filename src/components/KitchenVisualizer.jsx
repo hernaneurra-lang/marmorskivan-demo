@@ -56,7 +56,23 @@ export default function KitchenVisualizer({ materialName, materialImage, shape }
     if (!file || !file.type.startsWith("image/")) return;
     if (file.size > MAX_PHOTO_BYTES) { alert("Bilden är för stor (max 10 MB)."); return; }
     const reader = new FileReader();
-    reader.onload = (e) => setKitchenPhoto({ dataUrl: e.target.result, name: file.name });
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize to max 1024px wide, compress to JPEG 0.82
+        const MAX = 1024;
+        const scale = img.width > MAX ? MAX / img.width : 1;
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        setKitchenPhoto({ dataUrl, name: file.name });
+      };
+      img.src = e.target.result;
+    };
     reader.readAsDataURL(file);
   }
 
