@@ -349,6 +349,7 @@ app.post("/api/analytics", async (req, res) => {
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     const { event, session, page, ts, fp, referrer, ...rest } = body;
+    console.log(`[analytics] event=${event || "MISSING"} ct=${req.headers["content-type"]} body_type=${typeof req.body} has_db=${HAS_DB}`);
     if (HAS_DB && event) {
       const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
       const geo = await lookupGeo(ip);
