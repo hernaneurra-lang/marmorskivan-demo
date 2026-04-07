@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
+import { trackEvent } from "./lib/analytics";
 
 import MaterialPage from "./components/MaterialPage";
 import CalculatorPage from "./pages/CalculatorPage";
@@ -94,11 +95,12 @@ function normalizeCategoryFromQuery(cat) {
     "ceramics": "Keramik",
     
     // Komposit / Kvarts
-    "komposit": "Komposit",
-    "kompositsten": "Komposit",
-    "composite": "Komposit",
-    "kvarts": "Komposit",
-    "quartz": "Komposit",
+    "komposit": "kvarts/komposit",
+    "kompositsten": "kvarts/komposit",
+    "composite": "kvarts/komposit",
+    "kvarts": "kvarts/komposit",
+    "quartz": "kvarts/komposit",
+    "kvarts/komposit": "kvarts/komposit",
     
     // Kvartsit
     "kvartsit": "Kvartsit",
@@ -199,6 +201,18 @@ export default function App() {
           if (baseKey && th) idx.set(`${baseKey}__${th}`, r);
         }
         materialsIndexRef.current = idx;
+
+        // If variant was set from URL without a price (e.g. from trend stone "Beställ nu"),
+        // look it up by name in the freshly loaded index to get the real price.
+        setVariant((prev) => {
+          if (!prev || (prev.price && prev.price > 0)) return prev;
+          const bk = prev.baseKey || computeBaseKey(prev);
+          if (!bk) return prev;
+          const hit = idx.get(`${bk}__${prev.thicknessMm || 20}`) ||
+            [...idx.values()].find((r) => computeBaseKey(r) === bk);
+          if (!hit) return prev;
+          return { ...prev, price: Number(hit.price) || prev.price };
+        });
       } catch (e) {
         console.error("CSV Load Error:", e);
       }
@@ -231,6 +245,7 @@ export default function App() {
       });
 
       setView("calculator");
+      trackEvent("material_selected", { material: m.name, price: Number(m.price) || 0 });
     },
     [imagesMap]
   );
@@ -334,6 +349,11 @@ export default function App() {
     }
   }, [variant, thicknessMm, view, presetCategory]);
 
+  // Track view changes (only events, not page_view — Router handles that)
+  useEffect(() => {
+    if (view === "calculator") trackEvent("calculator_open");
+  }, [view]);
+
   // ✅ Funktion för att rensa formulär
   const handleClearForm = useCallback(() => {
     clearStorage();
@@ -408,7 +428,7 @@ export default function App() {
                 className={`px-2 sm:px-3 py-1.5 rounded-lg border text-xs sm:text-sm transition-colors ${
                   view === "calculator"
                     ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-white hover:bg-gray-50"
+                    : "bg-white text-gray-900 hover:bg-gray-50"
                 }`}
                 onClick={() => setView("calculator")}
                 disabled={!variant}
@@ -420,7 +440,7 @@ export default function App() {
                 className={`px-2 sm:px-3 py-1.5 rounded-lg border text-xs sm:text-sm transition-colors ${
                   view === "materials"
                     ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-white hover:bg-gray-50"
+                    : "bg-white text-gray-900 hover:bg-gray-50"
                 }`}
                 onClick={() => setView("materials")}
               >

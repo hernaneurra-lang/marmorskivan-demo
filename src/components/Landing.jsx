@@ -1,6 +1,7 @@
 // Path: src/components/Landing.jsx
 import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { trackEvent } from "../lib/analytics";
 import { useTranslation } from "react-i18next";
 import { heroTiles } from "../config/site";
 import Modal from "./modal";
@@ -149,6 +150,7 @@ export default function Landing() {
 
   const goToApp = (e) => {
     e.preventDefault();
+    trackEvent("cta_click", { source: "landing" });
     setTimeout(() => navigate("/app"), 0);
   };
 

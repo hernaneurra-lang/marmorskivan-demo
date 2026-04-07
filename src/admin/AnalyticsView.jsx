@@ -7,13 +7,95 @@ function CountryFlag({ code }) {
   return <img src={`${FLAG_BASE}/${code.toLowerCase()}.png`} alt={code} width={16} height={12} style={{ marginRight: 6, borderRadius: 2, verticalAlign: "middle" }} onError={(e) => { e.target.style.display = "none"; }} />;
 }
 
-function StatCard({ icon, value, label, color }) {
+function DrilldownModal({ kpi, label, period, headers, apiBase, onClose }) {
+  const [rows, setRows] = useState(null);
+  const [columns, setColumns] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${apiBase}/api/admin/analytics/drilldown?kpi=${kpi}&period=${period}`, { headers })
+      .then(r => r.json())
+      .then(d => { setColumns(d.columns || []); setRows(d.rows || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [kpi, period]);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  function fmtCell(val, colName) {
+    if (val === null || val === undefined || val === "—") return <span style={{ color: "var(--muted)" }}>—</span>;
+    if (colName === "Tid") {
+      const d = new Date(val);
+      return d.toLocaleString("sv-SE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+    if (colName === "Taggar") {
+      try {
+        const tags = JSON.parse(val);
+        if (!tags.length) return <span style={{ color: "var(--muted)" }}>—</span>;
+        return tags.map(t => <span key={t} style={{ background: "var(--border)", borderRadius: 4, padding: "1px 6px", fontSize: 11, marginRight: 3 }}>{t}</span>);
+      } catch { return val; }
+    }
+    return String(val);
+  }
+
   return (
-    <div className="admin-kpi-card">
+    <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 900, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{label} — detaljer</div>
+            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>{rows?.length ?? "…"} rader, senaste {period}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "var(--border)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "var(--text)" }}>✕</button>
+        </div>
+        <div style={{ overflow: "auto", flex: 1 }}>
+          {loading ? (
+            <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Laddar…</div>
+          ) : !rows || rows.length === 0 ? (
+            <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Ingen data för perioden</div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "var(--border)", position: "sticky", top: 0 }}>
+                  {columns.map(c => <th key={c} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>{c}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "var(--border)" + "33" }}>
+                    {row.map((cell, j) => (
+                      <td key={j} style={{ padding: "7px 12px", whiteSpace: j === 0 ? "nowrap" : "normal", maxWidth: j === 1 ? 200 : "none", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {fmtCell(cell, columns[j])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, value, label, color, onClick }) {
+  return (
+    <div className="admin-kpi-card" onClick={onClick}
+      style={{ cursor: onClick ? "pointer" : "default", transition: "transform 0.1s, box-shadow 0.1s" }}
+      onMouseEnter={e => { if (onClick) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 16px " + color + "33"; } }}
+      onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
       <div className="admin-kpi-icon" style={{ background: color + "22", color }}>{icon}</div>
       <div className="admin-kpi-body">
         <div className="admin-kpi-value">{Number(value || 0).toLocaleString("sv-SE")}</div>
         <div className="admin-kpi-label">{label}</div>
+        {onClick && <div style={{ fontSize: 10, color: color, marginTop: 2, opacity: 0.8 }}>Klicka för detaljer →</div>}
       </div>
     </div>
   );
@@ -168,7 +250,7 @@ function generateInsights(data) {
   if (data.peakHours?.length) {
     const topHour = [...data.peakHours].sort((a, b) => Number(b.visits) - Number(a.visits))[0];
     if (topHour) {
-      insights.push({ icon: "🕐", text: `Flest besök klockan ${topHour.hour}:00 (Stockholm-tid). Schemalägg kampanjer och sociala inlägg runt denna tid.` });
+      insights.push({ icon: "🕐", text: `Flest besök klockan ${Math.floor(Number(topHour.hour))}:00 (Stockholm-tid). Schemalägg kampanjer och sociala inlägg runt denna tid.` });
     }
   }
 
@@ -228,6 +310,7 @@ export default function AnalyticsView({ headers, apiBase }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("30d");
+  const [drilldown, setDrilldown] = useState(null); // { kpi, label }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -249,8 +332,20 @@ export default function AnalyticsView({ headers, apiBase }) {
     { value: "90d", label: "90 dagar" },
   ];
 
+  const dd = (kpi, label) => setDrilldown({ kpi, label });
+
   return (
     <>
+      {drilldown && (
+        <DrilldownModal
+          kpi={drilldown.kpi}
+          label={drilldown.label}
+          period={period}
+          headers={headers}
+          apiBase={apiBase}
+          onClose={() => setDrilldown(null)}
+        />
+      )}
       <div className="admin-topbar">
         <h1>📊 Analytics</h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -287,14 +382,14 @@ export default function AnalyticsView({ headers, apiBase }) {
           <>
             {/* KPI cards */}
             <div className="admin-kpi-grid">
-              <StatCard icon="👁️" value={data?.totalPageViews}    label="Sidvisningar"       color="#3b82f6" />
-              <StatCard icon="🧑" value={data?.uniqueSessions}    label="Unika sessioner"    color="#6366f1" />
-              <StatCard icon="💬" value={data?.chatSessions}      label="Chattsessioner"     color="#8b5cf6" />
-              <StatCard icon="🧮" value={data?.calculatorOpens}   label="Kalkylator öppnad"  color="#f59e0b" />
-              <StatCard icon="📋" value={data?.offerSubmits}      label="Offerter begärda"   color="#ef4444" />
-              <StatCard icon="📞" value={data?.totalContacts}     label="Kontaktbegäran"     color="#10b981" />
-              <StatCard icon="🤝" value={data?.handoverSessions}  label="Handover till agent" color="#06b6d4" />
-              <StatCard icon="✨" value={data?.kitchenRenders}    label="Köksrenderingar"     color="#a855f7" />
+              <StatCard icon="👁️" value={data?.totalPageViews}    label="Sidvisningar"        color="#3b82f6" onClick={() => dd("pageviews", "Sidvisningar")} />
+              <StatCard icon="🧑" value={data?.uniqueSessions}    label="Unika sessioner"     color="#6366f1" onClick={() => dd("sessions",  "Unika sessioner")} />
+              <StatCard icon="💬" value={data?.chatSessions}      label="Chattsessioner"      color="#8b5cf6" onClick={() => dd("chats",     "Chattsessioner")} />
+              <StatCard icon="🧮" value={data?.calculatorOpens}   label="Kalkylator öppnad"   color="#f59e0b" onClick={() => dd("calculator","Kalkylator öppnad")} />
+              <StatCard icon="📋" value={data?.offerSubmits}      label="Offerter begärda"    color="#ef4444" onClick={() => dd("offers",    "Offerter begärda")} />
+              <StatCard icon="📞" value={data?.totalContacts}     label="Kontaktbegäran"      color="#10b981" onClick={() => dd("contacts",  "Kontaktbegäran")} />
+              <StatCard icon="🤝" value={data?.handoverSessions}  label="Handover till agent" color="#06b6d4" onClick={() => dd("handover",  "Handover till agent")} />
+              <StatCard icon="✨" value={data?.kitchenRenders}    label="Köksrenderingar"     color="#a855f7" onClick={() => dd("renders",   "Köksrenderingar")} />
             </div>
 
             {/* Funnel + Top pages */}
@@ -311,6 +406,28 @@ export default function AnalyticsView({ headers, apiBase }) {
                 ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data</div>}
               </div>
             </div>
+
+            {/* Top materials */}
+            {data?.topMaterials?.length > 0 && (
+              <div className="admin-card">
+                <div className="admin-card-title">🪨 Top 20 — mest valda material</div>
+                <ul className="analytics-list bar-list">
+                  {(() => {
+                    const max = Math.max(...data.topMaterials.map((m) => Number(m.selections)), 1);
+                    return data.topMaterials.map((m, i) => (
+                      <li key={m.material} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
+                        <span style={{ color: "var(--muted)", fontSize: 12, width: 20, flexShrink: 0 }}>#{i + 1}</span>
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.material}</span>
+                        <div style={{ width: 80, height: 6, background: "var(--border)", borderRadius: 3, flexShrink: 0 }}>
+                          <div style={{ width: `${Math.round(Number(m.selections) / max * 100)}%`, height: "100%", background: "#10b981", borderRadius: 3 }} />
+                        </div>
+                        <span style={{ color: "var(--muted)", fontSize: 12, width: 28, textAlign: "right", flexShrink: 0 }}>{m.selections}</span>
+                      </li>
+                    ));
+                  })()}
+                </ul>
+              </div>
+            )}
 
             {/* Daily chats bar chart (CSS) */}
             <div className="admin-card">

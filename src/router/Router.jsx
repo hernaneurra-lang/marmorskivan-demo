@@ -1,12 +1,16 @@
 // Path: src/router/Router.jsx
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import SEO from "../components/SEO.jsx";
+import { trackPageView } from "../lib/analytics";
 
 import Landing from "../components/Landing.jsx";
 import App from "../App.jsx";
 import ChatWidget from "../chat/ChatWidget.jsx";
 import AdminPage from "../admin/AdminPage.jsx";
+
+// Sketch (lazy)
+const SketchPage = lazy(() => import("../pages/SketchPage.jsx"));
 
 // Material (lazy)
 const Marmor = lazy(() => import("../pages/material/Marmor.jsx"));
@@ -44,12 +48,14 @@ function Loader() {
 
 function SEOWrapper() {
   const { pathname } = useLocation();
+  useEffect(() => { trackPageView(pathname); }, [pathname]);
   return <SEO path={pathname} />;
 }
 
 function ChatWidgetWrapper() {
   const { pathname } = useLocation();
   if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/ritning")) return null;
   return <ChatWidget />;
 }
 
@@ -85,6 +91,9 @@ export default function AppRoutes() {
         <Route path="/material/travertin" element={<Travertin />} />
         <Route path="/material/semiprecious" element={<SemiPrecious />} />
         <Route path="/material/atervunnetglas" element={<AtervunnetGlas />} />
+
+        {/* 2D sketch */}
+        <Route path="/ritning" element={<SketchPage />} />
 
         {/* Admin */}
         <Route path="/admin" element={<AdminPage />} />

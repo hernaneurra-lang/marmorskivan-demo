@@ -1,5 +1,5 @@
 // src/admin/SettingsView.jsx — Full site settings: hero, colors, branding, pages, chat widget
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const LOGO_SIZES = [
   { value: "small",  label: "Liten (100px)" },
@@ -114,6 +114,151 @@ function Label({ children }) {
   );
 }
 
+function ImageUpload({ value, onChange, label }) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleFile = (file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (e) => onChange(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFile(e.dataTransfer.files[0]);
+  };
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <Label>{label}</Label>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        style={{
+          border: `2px dashed ${dragging ? "var(--green)" : "var(--border)"}`,
+          borderRadius: 10,
+          padding: "18px 14px",
+          textAlign: "center",
+          cursor: "pointer",
+          background: dragging ? "rgba(5,150,105,0.06)" : "var(--surface2)",
+          transition: "all 0.15s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14,
+        }}
+      >
+        {value ? (
+          <>
+            <img
+              src={value}
+              alt="preview"
+              style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)", flexShrink: 0 }}
+            />
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Bild vald ✓</div>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>Klicka eller dra för att byta</div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onChange(""); }}
+                style={{ marginTop: 4, fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                ✕ Ta bort bild
+              </button>
+            </div>
+          </>
+        ) : (
+          <div>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>📁</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>Klicka eller dra & släpp en bild</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>JPG, PNG, GIF, WebP — sparas som base64</div>
+          </div>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={(e) => handleFile(e.target.files[0])}
+      />
+    </div>
+  );
+}
+
+function AgentsList({ settings, setSettings }) {
+  const raw = settings.agents_list || "[]";
+  let agents = [];
+  try { agents = JSON.parse(raw); } catch {}
+
+  const save = (list) =>
+    setSettings((s) => ({ ...s, agents_list: JSON.stringify(list) }));
+
+  const addAgent = () =>
+    save([...agents, { id: Date.now().toString(), name: "", avatar_url: "", emoji: "👤" }]);
+
+  const update = (id, patch) =>
+    save(agents.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+
+  const remove = (id) => save(agents.filter((a) => a.id !== id));
+
+  return (
+    <div>
+      {agents.length === 0 && (
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+          Inga agenter tillagda ännu. Lägg till en agent nedan.
+        </div>
+      )}
+      {agents.map((agent) => (
+        <div key={agent.id} style={{
+          border: "1px solid var(--border)", borderRadius: 10, padding: 14,
+          marginBottom: 12, background: "var(--surface2)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            {agent.avatar_url
+              ? <img src={agent.avatar_url} alt="" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)", flexShrink: 0 }} />
+              : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{agent.emoji || "👤"}</div>
+            }
+            <input
+              className="admin-input"
+              value={agent.name}
+              onChange={(e) => update(agent.id, { name: e.target.value })}
+              placeholder="Agentens namn (visas för kunden)"
+              style={{ flex: 1, marginBottom: 0 }}
+            />
+            <button
+              onClick={() => remove(agent.id)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: 16, padding: "0 4px", flexShrink: 0 }}
+              title="Ta bort agent"
+            >✕</button>
+          </div>
+          <ImageUpload
+            label="Profilbild"
+            value={agent.avatar_url || ""}
+            onChange={(url) => update(agent.id, { avatar_url: url })}
+          />
+        </div>
+      ))}
+      <button
+        onClick={addAgent}
+        style={{
+          width: "100%", padding: "10px 0", borderRadius: 8, border: "2px dashed var(--border)",
+          background: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 600,
+        }}
+      >
+        + Lägg till agent
+      </button>
+      <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--surface)", borderRadius: 8, fontSize: 12, color: "var(--muted)", border: "1px solid var(--border)" }}>
+        Välj agent när du tar över en chatt i Chattar-vyn. Kunden ser agentens namn och bild i realtid.
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, children }) {
   return (
     <div className="admin-card">
@@ -212,64 +357,16 @@ export default function SettingsView({ headers, apiBase }) {
                 ))}
               </div>
             </div>
-            <TextField
-              label="Bot-avatar bild-URL (åsidosätter emoji)"
+            <ImageUpload
+              label="Bot-avatar bild (åsidosätter emoji)"
               value={settings.chat_bot_avatar_url || ""}
               onChange={set("chat_bot_avatar_url")}
-              placeholder="https://example.com/bot-avatar.jpg"
             />
-            {settings.chat_bot_avatar_url && (
-              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
-                <img src={settings.chat_bot_avatar_url} alt="Bot preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} onError={(e) => { e.target.style.display = "none"; }} />
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Förhandsgranskning</span>
-                <button onClick={() => set("chat_bot_avatar_url")("")} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>✕ Ta bort</button>
-              </div>
-            )}
           </Section>
 
-          {/* Agent profile */}
-          <Section title="🧑‍💼 Agentprofil (Human-support)">
-            <TextField
-              label="Agent-namn (visas för kunden)"
-              value={settings.agent_name || ""}
-              onChange={set("agent_name")}
-              placeholder="Kundtjänst"
-            />
-            <div style={{ marginBottom: 16 }}>
-              <Label>Agent-avatar (emoji)</Label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {AGENT_AVATARS.map((em) => (
-                  <button
-                    key={em}
-                    onClick={() => set("agent_avatar")(em)}
-                    style={{
-                      width: 40, height: 40, fontSize: 22, borderRadius: 8,
-                      border: `2px solid ${settings.agent_avatar === em ? "var(--green)" : "var(--border)"}`,
-                      background: settings.agent_avatar === em ? "rgba(5,150,105,0.1)" : "var(--surface2)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {em}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <TextField
-              label="Agent-avatar bild-URL (åsidosätter emoji)"
-              value={settings.agent_avatar_url || ""}
-              onChange={set("agent_avatar_url")}
-              placeholder="https://example.com/agent-photo.jpg"
-            />
-            {settings.agent_avatar_url && (
-              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
-                <img src={settings.agent_avatar_url} alt="Agent preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} onError={(e) => { e.target.style.display = "none"; }} />
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Förhandsgranskning</span>
-                <button onClick={() => set("agent_avatar_url")("")} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>✕ Ta bort</button>
-              </div>
-            )}
-            <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--muted)" }}>
-              Agent-svar du skickar via Chattar-vyn visas med detta namn och denna avatar hos kunden i realtid.
-            </div>
+          {/* Agent profiles */}
+          <Section title="🧑‍💼 Agenter (Human-support)">
+            <AgentsList settings={settings} setSettings={setSettings} />
           </Section>
 
           {/* Hero content */}
@@ -321,6 +418,16 @@ export default function SettingsView({ headers, apiBase }) {
             <TextField label="Sidtitel" value={settings.calc_title || ""} onChange={set("calc_title")} placeholder="Beräkna din bänkskiva" />
             <TextField label="Undertitel" value={settings.calc_subtitle || ""} onChange={set("calc_subtitle")} multiline placeholder="Ange dina mått och välj material…" />
             <TextField label="Offert-bekräftelse" value={settings.calc_confirm || ""} onChange={set("calc_confirm")} multiline placeholder="Tack! Vi återkommer inom 24 timmar." />
+          </Section>
+
+          {/* Features */}
+          <Section title="🗂️ Funktioner">
+            <ToggleField
+              label="2D-ritningsmodul (/ritning)"
+              checked={settings.sketch_enabled === "true"}
+              onChange={setBool("sketch_enabled")}
+              description="Visar knappen 'Visa 2D-ritning' i kalkylatorn — öppnar en utskrivbar teknisk skiss"
+            />
           </Section>
 
           {/* Colors & Aesthetics */}

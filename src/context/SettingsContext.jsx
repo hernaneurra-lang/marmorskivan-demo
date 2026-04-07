@@ -41,6 +41,8 @@ const DEFAULTS = {
   calc_title:       "Beräkna din bänkskiva",
   calc_subtitle:    "Ange dina mått och välj material — få pris direkt.",
   calc_confirm:     "Tack! Vi återkommer med en offert inom 24 timmar.",
+  // Features
+  sketch_enabled:   "false",
 };
 
 const SettingsContext = createContext(DEFAULTS);

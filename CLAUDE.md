@@ -44,11 +44,28 @@ Sju vyer: Dashboard, Chattar, Kontakter, Analytics, Rapporter, Kunskapsbas, Inst
 - **Status/prio**: Öppen/Avslutad + Normal/Hög/Brådskande
 
 ### Analytics (AnalyticsView)
-- KPI-kort: Sidvisningar, Unika sessioner, Chattsessioner, Kalkylator, Offerter, Kontakter, **Handover till agent**
+- KPI-kort: Sidvisningar, Unika sessioner, Chattsessioner, Kalkylator, Offerter, Kontakter, **Handover till agent**, AI-renderingar
 - Konverteringstratt (funnel)
 - Chattsessioner per dag (CSS bar chart)
 - **Geo-analytics**: Besökare per land (med flaggor) + populäraste städer
 - Händelsetyper + vanligaste frågor
+- **AI-insikter**: Automatisk analys av besökarsegment, peak hour, chattengagemang, avhoppsfrekvens
+
+### Analytics-events (full täckning fr.o.m. 2026-04)
+Alla användarinteraktioner loggas via `trackEvent()` i `src/lib/analytics.js`:
+| Event | Trigger |
+|---|---|
+| `page_view` | Varje route-byte (Router.jsx) |
+| `cta_click` | Landing-sidans knappar |
+| `calculator_open` | Kalkylatorn visas |
+| `material_selected` | Material väljs (inkl. namn + pris) |
+| `kitchen_render` | AI-rendering startad (material, mode, shape) |
+| `chat_open` | Chattwidgeten öppnas |
+| `chat_message` | Meddelande skickat |
+| `contact_form_open` | "Lämna kontaktuppgifter" klickas |
+| `contact_form_submit` | Kontaktformulär skickat |
+| `booking_open` | "Boka tid" klickas |
+| `offert_open` / `offert_submit_*` | Offertflödet (SubmitBox) |
 
 ### AI-chatt (server-logik)
 1. **Knowledge base keyword-match** körs FÖRE OpenAI — om ≥2 nyckelord matchar returneras KB-svar direkt (snabbare + billigare)
@@ -87,8 +104,18 @@ Nya kolumner (2025-03):
 
 Migrationer körs automatiskt vid serverstart (`migrate()` i `db.mjs`).
 
+## KitchenVisualizer (`src/components/KitchenVisualizer.jsx`)
+- Upload eget köksfoto → markera bänkyta med flood fill-verktyg → AI inpainting med gpt-image-1
+- **Fill-verktyg**: klicka på yta → flood fill med tolerans 38, dilate + hole-fill
+- **Erase-verktyg**: penselborttagning (radius 20px) via Pointer Events API
+- **Inpaint-logik**: markerade pixlar görs transparenta → skickas som PNG → AI fyller hålet
+- **Compositing**: AI-bilden skalas till originalets dimensioner och pixels compositas per mask-koordinat
+- Canvas-storlek sätts i JSX `style`-prop (inte useEffect) så React inte nollställer den
+- Trackar `kitchen_render` med mode (`generate`/`edit`/`mask`), material, shape, thickness
+
 ## Viktigt
 - **recharts är borttaget** — inkompatibelt med Vite manual chunk splitting. Använd CSS bar charts (klasser: `.bar-chart`, `.bar-col`, `.bar-col-bar` i `admin.css`)
 - **ip-api.com** använder HTTP (ej HTTPS) — ok för server-side anrop, ej för klienten
 - **Street-level geo från IP är omöjligt** — ISP:er äger IP-block, inte adresser
 - `VITE_CHAT_API_BASE` i `.env` pekar på Railway-URL för lokal utveckling
+- **Canvas vs img**: `max-h-full` fungerar inte reliabelt på `<canvas>` — beräkna CSS-storlek explicit i render (`Math.min(innerWidth/w, (innerHeight-64)/h) * scale`)

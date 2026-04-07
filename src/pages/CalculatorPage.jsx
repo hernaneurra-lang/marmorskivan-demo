@@ -11,6 +11,7 @@ import SubmitBox from "../components/SubmitBox";
 import KitchenVisualizer from "../components/KitchenVisualizer";
 import { computeTotals } from "../lib/CostCalculation";
 import { parseNumberLoose } from "../lib/materialUtils";
+import { useSettings } from "../context/SettingsContext";
 
 const mmToM = (mm) => (Number(mm) || 0) / 1000;
 const SHAPES = ["Straight", "Straight+Island", "L", "L+Island", "U", "U+Island", "Island"];
@@ -98,6 +99,8 @@ export default function CalculatorPage({
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language || "sv-SE";
+  const settings = useSettings();
+  const sketchEnabled = settings.sketch_enabled === "true";
 const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   /* --- Formatering --- */
@@ -275,6 +278,23 @@ function resetFormCompletely() {
 
   setShowResetConfirm(false);
 }
+
+  function openSketch() {
+    const islandEnabled = ["Straight+Island", "L+Island", "U+Island", "Island"].includes(shape);
+    const data = {
+      material: variant?.name,
+      shape,
+      thicknessMm,
+      edgeType,
+      straightSurfaces,
+      legA,
+      legB,
+      uShape,
+      island: islandEnabled ? island : null,
+    };
+    const encoded = btoa(JSON.stringify(data));
+    window.open(`/ritning?data=${encoded}`, "_blank");
+  }
 
   /* --- Beräkningar --- */
   const islandEnabled = ["Straight+Island", "L+Island", "U+Island", "Island"].includes(shape);
@@ -563,6 +583,21 @@ function resetFormCompletely() {
             </div>
           </div>
         </div>
+
+        {variant?.name && sketchEnabled && (
+          <button
+            type="button"
+            onClick={openSketch}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
+                       border-2 border-emerald-600 text-emerald-700 text-sm font-semibold
+                       hover:bg-emerald-50 transition-all"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/>
+            </svg>
+            Visa 2D-ritning
+          </button>
+        )}
 
         {variant?.name && (
           <KitchenVisualizer

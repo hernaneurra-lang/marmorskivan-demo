@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettings } from "../context/SettingsContext.jsx";
 import BookingModal from "../components/BookingModal.jsx";
+import { trackEvent } from "../lib/analytics";
 import "./ChatWidget.css";
 
 const STORAGE_KEY = "marmorskivan_chat_v1";
@@ -48,18 +49,81 @@ function isWithinBusinessHours() {
   return day >= 1 && day <= 5 && mins >= 8 * 60 && mins < 17 * 60;
 }
 
-const QUICK_ACTIONS = [
-  { key: "price",     label: "💰 Priser" },
-  { key: "materials", label: "🪨 Material" },
-  { key: "measure",   label: "📏 Mätning" },
-  { key: "delivery",  label: "🚚 Leverans" },
-];
-const QUICK_MESSAGES = {
-  price:     "Vad kostar en bänkskiva?",
-  materials: "Vilket material är bäst för kök?",
-  measure:   "Hur fungerar mätningen?",
-  delivery:  "Hur lång är leveranstiden?",
+/* ---- i18n ---- */
+function getChatLang() {
+  try { const l = localStorage.getItem("lang"); if (l === "en") return "en"; } catch {}
+  return "sv";
+}
+
+const CHAT_I18N = {
+  sv: {
+    onlineStatus:   "Online — svarar direkt",
+    offlineStatus:  "Offline — svarar Mån–Fre 08–17",
+    agentStatus:    "Mänsklig support",
+    offlineNotice:  "🕐 Vi är just nu offline. Vi svarar på meddelanden vardagar 08–17. Du kan fortfarande skriva — vi återkommer!",
+    greeting:       "Hej! Hur kan jag hjälpa dig med din bänkskiva?",
+    handover:       "Du är nu kopplad till en av våra rådgivare. 👋 Vi svarar dig direkt!",
+    placeholder:    "Skriv ett meddelande…",
+    agentPlaceholder: "Skriv till vår rådgivare…",
+    contact:        "📞 Bli kontaktad",
+    book:           "📅 Boka tid",
+    quickActions: [
+      { key: "price",     label: "💰 Priser" },
+      { key: "materials", label: "🪨 Material" },
+      { key: "measure",   label: "📏 Mätning" },
+      { key: "delivery",  label: "🚚 Leverans" },
+    ],
+    quickMessages: {
+      price:     "Vad kostar en bänkskiva?",
+      materials: "Vilket material är bäst för kök?",
+      measure:   "Hur fungerar mätningen?",
+      delivery:  "Hur lång är leveranstiden?",
+    },
+    formTitle:   "Lämna dina kontaktuppgifter",
+    formName:    "Namn *",
+    formPhone:   "Telefon *",
+    formEmail:   "E-post",
+    formMessage: "Meddelande",
+    formSend:    "Skicka",
+    formCancel:  "Avbryt",
+    errorMsg:    "Tyvärr uppstod ett fel. Ring oss eller skicka en offertförfrågan.",
+  },
+  en: {
+    onlineStatus:   "Online — replies instantly",
+    offlineStatus:  "Offline — replies Mon–Fri 08–17",
+    agentStatus:    "Human support",
+    offlineNotice:  "🕐 We are currently offline. We reply to messages weekdays 08–17. You can still write — we'll get back to you!",
+    greeting:       "Hi! How can I help you with your worktop?",
+    handover:       "You are now connected to one of our advisors. 👋 We'll reply right away!",
+    placeholder:    "Write a message…",
+    agentPlaceholder: "Write to our advisor…",
+    contact:        "📞 Contact us",
+    book:           "📅 Book a meeting",
+    quickActions: [
+      { key: "price",     label: "💰 Prices" },
+      { key: "materials", label: "🪨 Materials" },
+      { key: "measure",   label: "📏 Measuring" },
+      { key: "delivery",  label: "🚚 Delivery" },
+    ],
+    quickMessages: {
+      price:     "How much does a worktop cost?",
+      materials: "Which material is best for a kitchen?",
+      measure:   "How does the measuring work?",
+      delivery:  "How long is the delivery time?",
+    },
+    formTitle:   "Leave your contact details",
+    formName:    "Name *",
+    formPhone:   "Phone *",
+    formEmail:   "Email",
+    formMessage: "Message",
+    formSend:    "Send",
+    formCancel:  "Cancel",
+    errorMsg:    "An error occurred. Please call us or send a quote request.",
+  },
 };
+
+const QUICK_ACTIONS = CHAT_I18N.sv.quickActions;
+const QUICK_MESSAGES = CHAT_I18N.sv.quickMessages;
 
 export default function ChatWidget() {
   const settings = useSettings();
@@ -68,13 +132,15 @@ export default function ChatWidget() {
 }
 
 function ChatWidgetInner({ settings }) {
+  const lang          = getChatLang();
+  const ui            = CHAT_I18N[lang] || CHAT_I18N.sv;
   const botName       = settings.chat_bot_name      || "Marmorskivan AI";
-  const botAvatar     = settings.chat_bot_avatar    || "🪨";
+  const botAvatar     = settings.chat_bot_avatar    || "✨";
   const botAvatarUrl  = settings.chat_bot_avatar_url || "";
   const agentName     = settings.agent_name         || "Kundtjänst";
-  const agentAvatar   = settings.agent_avatar       || "🧑‍💼";
+  const agentAvatar   = settings.agent_avatar       || "👩‍💼";
   const agentAvatarUrl = settings.agent_avatar_url  || "";
-  const greeting      = settings.chat_greeting      || "Hej! Hur kan jag hjälpa dig med din bänkskiva?";
+  const greeting      = (lang === "sv" ? settings.chat_greeting : null) || ui.greeting;
   const accent        = settings.accent_color       || "#059669";
   const online        = isWithinBusinessHours();
 
@@ -85,10 +151,17 @@ function ChatWidgetInner({ settings }) {
   const [showForm, setShowForm] = useState(false);
   const [formSent, setFormSent] = useState(false);
   const [mode, setMode]         = useState("bot"); // 'bot' | 'agent'
+  const [sessionAgentName, setSessionAgentName]     = useState(null);
+  const [sessionAgentAvatar, setSessionAgentAvatar] = useState(null);
   const [form, setForm]         = useState({ name: "", phone: "", email: "", message: "" });
   const [unread, setUnread]     = useState(0);
   const [showBooking, setShowBooking] = useState(false);
   const [agentTyping, setAgentTyping] = useState(false);
+
+  // Per-session agent overrides (set during polling when admin assigns a specific agent)
+  const effectiveAgentName     = sessionAgentName     || agentName;
+  const effectiveAgentAvatar   = sessionAgentAvatar !== null ? sessionAgentAvatar : agentAvatarUrl;
+  const effectiveAgentEmoji    = agentAvatar;
 
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
@@ -155,15 +228,17 @@ function ChatWidgetInner({ settings }) {
       try {
         const res = await fetch(`${API_BASE}/api/chat/sessions/${sessionId}/mode`);
         if (!res.ok) return;
-        const { mode: m } = await res.json();
+        const { mode: m, agent_name, agent_avatar_url } = await res.json();
         if (m === "agent" && prevMode === "bot") {
           setMessages((prev) => [
             ...prev,
-            { id: uid(), role: "assistant", content: "Du är nu kopplad till en av våra rådgivare. 👋 Vi svarar dig direkt!", ts: Date.now() },
+            { id: uid(), role: "assistant", content: ui.handover, ts: Date.now() },
           ]);
         }
         prevMode = m;
         setMode(m);
+        if (agent_name) setSessionAgentName(agent_name);
+        if (agent_avatar_url !== undefined) setSessionAgentAvatar(agent_avatar_url || null);
       } catch {}
     };
     const t = setInterval(check, 5000);
@@ -210,12 +285,13 @@ function ChatWidgetInner({ settings }) {
     setInput("");
     addMsg("user", userText);
     setLoading(true);
+    trackEvent("chat_message", { session: sessionRef.current?.id });
     try {
       const history = messages.slice(-10).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
       const res = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText, history, sessionId: sessionRef.current?.id, page: window.location.pathname }),
+        body: JSON.stringify({ message: userText, history, sessionId: sessionRef.current?.id, page: window.location.pathname, lang }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -227,9 +303,9 @@ function ChatWidgetInner({ settings }) {
       const replyTs = new Date().toISOString();
       lastSeenRef.current = replyTs;
       safeSave(STORAGE_KEY + "_lastSeen", replyTs);
-      addMsg("assistant", data.reply || "Tyvärr kunde jag inte svara just nu.");
+      addMsg("assistant", data.reply || ui.errorMsg);
     } catch {
-      addMsg("assistant", "Tyvärr uppstod ett fel. Ring oss eller skicka en offertförfrågan.");
+      addMsg("assistant", ui.errorMsg);
     } finally { setLoading(false); }
   }, [loading, messages, addMsg]);
 
@@ -250,6 +326,7 @@ function ChatWidgetInner({ settings }) {
     setFormSent(true);
     addMsg("assistant", `Tack ${form.name}! Vi hör av oss på ${form.phone} så snart som möjligt. 🙏`);
     setShowForm(false);
+    trackEvent("contact_form_submit", { session: sessionRef.current?.id });
   };
 
   const clearChat = () => {
@@ -263,7 +340,7 @@ function ChatWidgetInner({ settings }) {
     <>
       <button
         className={`ms-chat-toggle${unread ? " blinking" : ""}`}
-        onClick={() => setIsOpen((o) => !o)}
+        onClick={() => setIsOpen((o) => { if (!o) trackEvent("chat_open"); return !o; })}
         style={{ background: accent }}
         aria-label={isOpen ? "Stäng chatt" : "Öppna chatt"}
       >
@@ -278,19 +355,25 @@ function ChatWidgetInner({ settings }) {
         <div className="ms-chat-container" role="dialog" aria-label="Chatt">
 
           {/* Header with accent color */}
-          <div className="ms-chat-header" style={{ background: accent }}>
+          <div className="ms-chat-header" style={{ background: mode === "agent" ? "#0e7490" : accent }}>
             <div className="ms-chat-header-top">
               <div className="ms-chat-header-info">
-                <AvatarEl url={botAvatarUrl} emoji={botAvatar} className="ms-header-avatar" />
+                {mode === "agent" ? (
+                  <AvatarEl url={effectiveAgentAvatar} emoji={effectiveAgentEmoji} className="ms-header-avatar" />
+                ) : (
+                  <AvatarEl url={botAvatarUrl} emoji={botAvatar} className="ms-header-avatar" />
+                )}
                 <div>
-                  <div className="ms-chat-brand">{botName}</div>
+                  <div className="ms-chat-brand">
+                    {mode === "agent" ? effectiveAgentName : botName}
+                  </div>
                   <div className="ms-chat-subtitle">
                     <span className={`ms-status-dot ${online || mode === "agent" ? "online" : "offline"}`} />
                     {mode === "agent"
-                      ? `${agentName} — Human support`
+                      ? ui.agentStatus
                       : online
-                        ? "Online — svarar direkt"
-                        : "Offline — svarar Mån–Fre 08–17"}
+                        ? ui.onlineStatus
+                        : ui.offlineStatus}
                   </div>
                 </div>
               </div>
@@ -309,6 +392,22 @@ function ChatWidgetInner({ settings }) {
             </div>
           </div>
 
+          {mode === "agent" && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 14px", fontSize: 12, fontWeight: 600,
+              background: "#ecfeff", color: "#0e7490", borderBottom: "1px solid #a5f3fc",
+            }}>
+              {effectiveAgentAvatar
+                ? <img src={effectiveAgentAvatar} alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }} />
+                : <span>👤</span>
+              }
+              {lang === "sv"
+                ? `Du chattar nu med ${effectiveAgentName}`
+                : `You are now chatting with ${effectiveAgentName}`}
+            </div>
+          )}
+
           <div className="ms-chat-messages">
             {messages.length === 0 && (
               <div className="ms-chat-welcome">
@@ -316,26 +415,31 @@ function ChatWidgetInner({ settings }) {
                 <div className="ms-welcome-title">{greeting}</div>
                 {!online && mode !== "agent" && (
                   <div className="ms-offline-notice">
-                    🕐 Vi är just nu offline. Vi svarar på meddelanden vardagar 08–17. Du kan fortfarande skriva — vi återkommer!
+                    {ui.offlineNotice}
                   </div>
                 )}
                 <div className="ms-quick-actions">
-                  {QUICK_ACTIONS.map((qa) => (
-                    <button
-                      key={qa.key}
-                      className="ms-qa-btn"
-                      style={{ borderColor: accent, color: accent }}
-                      onClick={() => sendMessage(QUICK_MESSAGES[qa.key])}
-                    >
-                      {qa.label}
-                    </button>
-                  ))}
+                  {(() => {
+                    let customQA = [];
+                    try { customQA = JSON.parse(settings.quick_actions_list || "[]"); } catch {}
+                    const actions = customQA.length ? customQA : ui.quickActions.map((qa) => ({ label: qa.label, message: ui.quickMessages[qa.key] }));
+                    return actions.map((qa, i) => (
+                      <button
+                        key={i}
+                        className="ms-qa-btn"
+                        style={{ borderColor: accent, color: accent }}
+                        onClick={() => sendMessage(qa.message)}
+                      >
+                        {qa.label}
+                      </button>
+                    ));
+                  })()}
                   <button
                     className="ms-qa-btn"
                     style={{ borderColor: accent, color: accent }}
-                    onClick={() => setShowBooking(true)}
+                    onClick={() => { setShowBooking(true); trackEvent("booking_open", { session: sessionRef.current?.id }); }}
                   >
-                    📅 Boka tid
+                    {ui.book}
                   </button>
                 </div>
               </div>
@@ -347,12 +451,12 @@ function ChatWidgetInner({ settings }) {
                   <AvatarEl url={botAvatarUrl} emoji={botAvatar} style={{ background: accent + "22", color: accent }} />
                 )}
                 {m.role === "agent" && (
-                  <AvatarEl url={agentAvatarUrl} emoji={agentAvatar} className="ms-chat-avatar ms-agent-avatar" />
+                  <AvatarEl url={effectiveAgentAvatar} emoji={effectiveAgentEmoji} className="ms-chat-avatar ms-agent-avatar" />
                 )}
                 <div className="ms-message-wrapper">
                   {(m.role === "assistant" || m.role === "agent") && (
                     <div className="ms-message-sender">
-                      {m.role === "agent" ? agentName : botName}
+                      {m.role === "agent" ? effectiveAgentName : botName}
                     </div>
                   )}
                   <div
@@ -377,9 +481,9 @@ function ChatWidgetInner({ settings }) {
             )}
             {agentTyping && mode === "agent" && (
               <div className="ms-message agent">
-                <AvatarEl url={agentAvatarUrl} emoji={agentAvatar} className="ms-chat-avatar ms-agent-avatar" />
+                <AvatarEl url={effectiveAgentAvatar} emoji={effectiveAgentEmoji} className="ms-chat-avatar ms-agent-avatar" />
                 <div className="ms-message-wrapper">
-                  <div className="ms-message-sender">{agentName}</div>
+                  <div className="ms-message-sender">{effectiveAgentName}</div>
                   <div className="ms-message-content ms-typing"><span /><span /><span /></div>
                 </div>
               </div>
@@ -387,18 +491,18 @@ function ChatWidgetInner({ settings }) {
 
             {showForm && !formSent && (
               <form className="ms-contact-form" onSubmit={handleFormSubmit}>
-                <div className="ms-form-title">Lämna dina kontaktuppgifter</div>
-                <input className="ms-form-input" placeholder="Namn *" value={form.name}
+                <div className="ms-form-title">{ui.formTitle}</div>
+                <input className="ms-form-input" placeholder={ui.formName} value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
-                <input className="ms-form-input" placeholder="Telefon *" value={form.phone}
+                <input className="ms-form-input" placeholder={ui.formPhone} value={form.phone}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required />
-                <input className="ms-form-input" placeholder="E-post" value={form.email}
+                <input className="ms-form-input" placeholder={ui.formEmail} value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-                <textarea className="ms-form-input" placeholder="Meddelande" value={form.message} rows={2}
+                <textarea className="ms-form-input" placeholder={ui.formMessage} value={form.message} rows={2}
                   onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} />
                 <div className="ms-form-actions">
-                  <button type="submit" className="ms-form-primary" style={{ background: accent }}>Skicka</button>
-                  <button type="button" className="ms-form-secondary" onClick={() => setShowForm(false)}>Avbryt</button>
+                  <button type="submit" className="ms-form-primary" style={{ background: accent }}>{ui.formSend}</button>
+                  <button type="button" className="ms-form-secondary" onClick={() => setShowForm(false)}>{ui.formCancel}</button>
                 </div>
               </form>
             )}
@@ -410,9 +514,9 @@ function ChatWidgetInner({ settings }) {
               <button
                 className="ms-contact-btn"
                 style={{ color: accent, borderColor: accent + "44" }}
-                onClick={() => setShowForm(true)}
+                onClick={() => { setShowForm(true); trackEvent("contact_form_open", { session: sessionRef.current?.id }); }}
               >
-                📞 Bli kontaktad
+                {ui.contact}
               </button>
             )}
             <div className="ms-chat-input-row">
@@ -422,7 +526,7 @@ function ChatWidgetInner({ settings }) {
                 value={input}
                 onChange={(e) => { setInput(e.target.value); sendTyping(); }}
                 onKeyDown={handleKey}
-                placeholder={mode === "agent" ? "Skriv till vår rådgivare…" : "Skriv ett meddelande…"}
+                placeholder={mode === "agent" ? ui.agentPlaceholder : ui.placeholder}
                 rows={1}
                 disabled={loading}
               />

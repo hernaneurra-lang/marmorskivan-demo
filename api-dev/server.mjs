@@ -459,7 +459,7 @@ app.post("/api/ai-render", async (req, res) => {
     return res.status(503).json({ error: "OpenAI inte konfigurerat" });
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-  const { materialName, shape, thicknessMm, materialImageUrl, kitchenPhotoBase64 } = req.body || {};
+  const { materialName, shape, thicknessMm, materialImageUrl, kitchenPhotoBase64, hasSelection, photoWidth, photoHeight } = req.body || {};
   if (!materialName) return res.status(400).json({ error: "materialName krävs" });
 
   // Block if already rendering
@@ -509,19 +509,30 @@ app.post("/api/ai-render", async (req, res) => {
       const edgeDesc = mm >= 30
         ? `The countertop edge is ${mm}mm thick — a substantial, bold profile.`
         : `The countertop edge is ${mm}mm thick — a slim, elegant profile.`;
-      const prompt = hasKitchen
-        ? `You are editing a kitchen photo. Change ONE thing only: replace the countertop stone surface (the flat horizontal top of the kitchen island/bench) with the stone texture from the reference image. ${edgeDesc}
 
-DO NOT CHANGE ANYTHING ELSE. The floor must stay exactly as it is. The cabinets stay. The walls stay. The ceiling stays. The appliances stay. The objects on the counter stay. Only the stone countertop surface itself changes material.
+      // Prompt depends on mode
+      const prompt = hasSelection
+        ? `Fill in the transparent/cutout area in this kitchen photo with ${cleanName} stone countertop surface. The transparent hole is exactly where the countertop should be. Use the stone texture from the reference image — same color, same veining, same surface finish. ${edgeDesc} The result must look photorealistic and seamlessly integrated. Do not change anything else in the photo.`
+        : hasKitchen
+          ? `You are editing a kitchen photo. Change ONE thing only: replace the countertop stone surface (the flat horizontal top of the kitchen island/bench) with the stone texture from the reference image. ${edgeDesc} DO NOT CHANGE ANYTHING ELSE. The floor must stay exactly as it is. The cabinets stay. The walls stay. The ceiling stays. The appliances stay. The objects on the counter stay. Only the stone countertop surface itself changes material. The new countertop material must exactly match the color, veining, and texture of the reference stone image.`
+          : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. ${edgeDesc} The stone is ONLY on the horizontal countertop surfaces — not on the floor, not on cabinet fronts, not on walls. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
 
-The new countertop material must exactly match the color, veining, and texture of the reference stone image.`
-        : `Generate a hyperrealistic luxury kitchen interior featuring countertops made of the EXACT stone shown in the reference image — same color, same veining pattern, same surface texture. Material: ${cleanName}. ${edgeDesc} The stone is ONLY on the horizontal countertop surfaces — not on the floor, not on cabinet fronts, not on walls. All countertops are one continuous slab (no tiles or joints). Modern Scandinavian kitchen, white handleless cabinetry, natural daylight. Photorealistic, Architectural Digest quality.`;
+      // Pick output size to match the photo's orientation — avoids distortion in compositing
+      const outputSize = (() => {
+        if (!photoWidth || !photoHeight) return "1024x1024";
+        const ratio = photoWidth / photoHeight;
+        if (ratio > 1.2) return "1536x1024"; // landscape
+        if (ratio < 0.85) return "1024x1536"; // portrait
+        return "1024x1024";
+      })();
+
+      console.log(`[ai-render] mode=${hasSelection ? "inpaint" : hasKitchen ? "edit" : "generate"} size=${outputSize}`);
 
       const result = await getOpenAI().images.edit({
         model: "gpt-image-1",
         image: images.length === 1 ? images[0] : images,
         prompt,
-        size: "1536x1024",
+        size: outputSize,
         quality: "high",
         input_fidelity: "high",
       });
@@ -529,8 +540,26 @@ The new countertop material must exactly match the color, veining, and texture o
       const b64out = result.data[0].b64_json;
       imageUrl = `data:image/png;base64,${b64out}`;
 
+    } else if (kitchenPhotoBase64) {
+      // ── Photo uploaded but no material image — just describe in prompt ──
+      const b64 = kitchenPhotoBase64.replace(/^data:[^;]+;base64,/, "");
+      const kitBuf = Buffer.from(b64, "base64");
+      const kitFile = await toFile(kitBuf, "photo.jpg", { type: "image/jpeg" });
+      const cleanName = (materialName || "").replace(/_/g, " ");
+      const mm = Number(thicknessMm) || 20;
+      const prompt = hasSelection
+        ? `Fill in the transparent/cutout area with ${cleanName} stone surface. Photorealistic, seamlessly integrated.`
+        : `Replace any stone/tile/countertop surfaces in this photo with ${cleanName} stone. Keep everything else exactly as is.`;
+      const result = await getOpenAI().images.edit({
+        model: "gpt-image-1",
+        image: kitFile,
+        prompt,
+        size: "1024x1024",
+        quality: "high",
+      });
+      imageUrl = `data:image/png;base64,${result.data[0].b64_json}`;
     } else {
-      // ── Fallback: DALL-E 3 text-only ──
+      // ── No photo: DALL-E 3 generates new scene ──
       const prompt = buildKitchenPrompt(materialName, shape);
       const result = await getOpenAI().images.generate({
         model: "dall-e-3",
@@ -788,14 +817,14 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       calculatorOpens, offerSubmits,
       topPages, topEvents, dailyChats, popularQuestions,
       geoCountries, geoCities, handoverSessions, deviceStats,
-      referrers, peakHours, dailyPageViews, kitchenRenders,
+      referrers, peakHours, dailyPageViews, kitchenRenders, topMaterials,
     ] = await Promise.all([
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(DISTINCT session_id) AS total FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL`),
       query(`SELECT COUNT(*) AS total FROM chat_sessions WHERE created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(*) AS total FROM contacts WHERE created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event IN ('calculator_open', 'app_open') AND created_at > NOW() - INTERVAL '${interval}'`),
-      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event IN ('offer_submit', 'offer_request') AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event IN ('offert_submit_success', 'offer_submit', 'offer_request') AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`
         SELECT page, COUNT(*) AS views
         FROM analytics_events WHERE event = 'page_view' AND page IS NOT NULL AND created_at > NOW() - INTERVAL '${interval}'
@@ -866,13 +895,24 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
         WHERE created_at > NOW() - INTERVAL '${interval}' AND fp_hash IS NOT NULL
       `),
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'kitchen_render' AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`
+        SELECT
+          data->>'material' AS material,
+          COUNT(*) AS selections
+        FROM analytics_events
+        WHERE event = 'material_selected'
+          AND created_at > NOW() - INTERVAL '${interval}'
+          AND data->>'material' IS NOT NULL
+        GROUP BY material ORDER BY selections DESC LIMIT 20
+      `),
     ]);
 
-    const pv   = Number(pageViews.rows[0]?.total || 0);
-    const calc = Number(calculatorOpens.rows[0]?.total || 0);
-    const offer = Number(offerSubmits.rows[0]?.total || 0);
-    const cont  = Number(contacts.rows[0]?.total || 0);
-    const chats = Number(chatSessions.rows[0]?.total || 0);
+    const pv     = Number(pageViews.rows[0]?.total || 0);
+    const calc   = Number(calculatorOpens.rows[0]?.total || 0);
+    const matSel = Number(topMaterials.rows.reduce((s, r) => s + Number(r.selections), 0));
+    const offer  = Number(offerSubmits.rows[0]?.total || 0);
+    const cont   = Number(contacts.rows[0]?.total || 0);
+    const chats  = Number(chatSessions.rows[0]?.total || 0);
 
     res.json({
       totalPageViews:    pv,
@@ -883,11 +923,13 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       offerSubmits:      offer,
       handoverSessions:  Number(handoverSessions.rows[0]?.total || 0),
       kitchenRenders:    Number(kitchenRenders.rows[0]?.total || 0),
+      topMaterials:      topMaterials.rows,
       funnel: [
-        { label: "Sidvisningar",          value: pv,    pct: 100 },
-        { label: "Kalkylator öppnad",      value: calc,  pct: pv  ? Math.round(calc  / pv  * 100) : 0 },
-        { label: "Offert begärd",          value: offer, pct: calc ? Math.round(offer / calc * 100) : 0 },
-        { label: "Kontaktuppgifter lämnade", value: cont, pct: offer ? Math.round(cont / offer * 100) : 0 },
+        { label: "Sidvisningar",            value: pv,     pct: 100 },
+        { label: "Kalkylator öppnad",        value: calc,   pct: pv     ? Math.round(calc   / pv     * 100) : 0 },
+        { label: "Material valt",            value: matSel, pct: calc   ? Math.round(matSel / calc   * 100) : 0 },
+        { label: "Offert begärd",            value: offer,  pct: matSel ? Math.round(offer  / matSel * 100) : 0 },
+        { label: "Kontaktuppgifter lämnade", value: cont,   pct: offer  ? Math.round(cont   / offer  * 100) : 0 },
       ],
       topPages:          topPages.rows,
       topEvents:         topEvents.rows,
@@ -906,6 +948,109 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
     });
   } catch (e) {
     console.error("[admin] analytics:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: analytics drill-down ──
+app.get("/api/admin/analytics/drilldown", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ rows: [] });
+  const interval = periodInterval(req.query.period);
+  const kpi = req.query.kpi || "";
+  try {
+    let rows = [];
+    let columns = [];
+
+    if (kpi === "pageviews") {
+      columns = ["Tid", "Sida", "Land", "Stad", "Källa", "Enhet"];
+      const r = await query(`
+        SELECT created_at, page, country, city, referrer,
+          CASE WHEN mobile = true THEN 'Mobil' WHEN mobile = false THEN 'Dator' ELSE '?' END AS device
+        FROM analytics_events
+        WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.page || "/", x.country || "—", x.city || "—", x.referrer || "Direkt", x.device]);
+
+    } else if (kpi === "sessions") {
+      columns = ["Tid", "Sida", "Land", "Stad", "Enhet", "Skärm"];
+      const r = await query(`
+        SELECT MIN(created_at) AS created_at, page, country, city,
+          CASE WHEN mobile = true THEN 'Mobil' WHEN mobile = false THEN 'Dator' ELSE '?' END AS device,
+          screen
+        FROM analytics_events
+        WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL
+        GROUP BY session_id, page, country, city, mobile, screen
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.page || "/", x.country || "—", x.city || "—", x.device, x.screen || "—"]);
+
+    } else if (kpi === "chats") {
+      columns = ["Tid", "Land", "Stad", "Status", "Prioritet", "Taggar"];
+      const r = await query(`
+        SELECT created_at, country, city, status, priority, tags
+        FROM chat_sessions
+        WHERE created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.country || "—", x.city || "—", x.status || "open", x.priority || "normal", x.tags || "[]"]);
+
+    } else if (kpi === "calculator") {
+      columns = ["Tid", "Sida", "Land", "Enhet"];
+      const r = await query(`
+        SELECT created_at, page, country,
+          CASE WHEN mobile = true THEN 'Mobil' WHEN mobile = false THEN 'Dator' ELSE '?' END AS device
+        FROM analytics_events
+        WHERE event IN ('calculator_open', 'app_open') AND created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.page || "—", x.country || "—", x.device]);
+
+    } else if (kpi === "offers") {
+      columns = ["Tid", "Material", "Form", "Land", "Enhet"];
+      const r = await query(`
+        SELECT created_at, data, country,
+          CASE WHEN mobile = true THEN 'Mobil' WHEN mobile = false THEN 'Dator' ELSE '?' END AS device
+        FROM analytics_events
+        WHERE event IN ('offert_submit_success', 'offer_submit', 'offer_request') AND created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.data?.material || "—", x.data?.shape || "—", x.country || "—", x.device]);
+
+    } else if (kpi === "contacts") {
+      columns = ["Tid", "Namn", "Telefon", "E-post", "Session"];
+      const r = await query(`
+        SELECT created_at, name, phone, email, session_id
+        FROM contacts
+        WHERE created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.name || "—", x.phone || "—", x.email || "—", x.session_id || "—"]);
+
+    } else if (kpi === "handover") {
+      columns = ["Tid", "Land", "Stad", "Agent", "Taggar"];
+      const r = await query(`
+        SELECT created_at, country, city, agent_name, tags
+        FROM chat_sessions
+        WHERE mode = 'agent' AND created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.country || "—", x.city || "—", x.agent_name || "—", x.tags || "[]"]);
+
+    } else if (kpi === "renders") {
+      columns = ["Tid", "Material", "Läge", "Form", "Tjocklek", "Land"];
+      const r = await query(`
+        SELECT created_at, data, country
+        FROM analytics_events
+        WHERE event = 'kitchen_render' AND created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `);
+      rows = r.rows.map(x => [x.created_at, x.data?.material || "—", x.data?.mode || "—", x.data?.shape || "—", x.data?.thicknessMm ? x.data.thicknessMm + "mm" : "—", x.country || "—"]);
+    }
+
+    res.json({ columns, rows });
+  } catch (e) {
+    console.error("[drilldown]", e.message);
     res.status(500).json({ error: e.message });
   }
 });
