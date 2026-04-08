@@ -1,6 +1,7 @@
 // Path: src/components/OpeningsSection.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { trackEvent } from "../lib/analytics";
 
 /** ---- Maxantal (hårdgräns) ---- */
 const ABS_MAX = { sink: 3, faucet: 3, hob: 2 };
@@ -334,9 +335,14 @@ export default function OpeningsSection({ value, onChange }) {
           }
           onClose={() => setCatalogOpen(null)}
           onCommit={(items) => {
+            const typeMap = { sinks: "sink", faucets: "faucet", hobs: "hob" };
+            const type = typeMap[catalogOpen.datasetKey] || catalogOpen.datasetKey;
             if (catalogOpen.datasetKey === "sinks") setPart("sink", { items });
             else if (catalogOpen.datasetKey === "faucets") setPart("faucet", { items });
             else setPart("hob", { items });
+            items.forEach(item => {
+              if (item?.name) trackEvent("accessory_selected", { type, name: item.name, price: item.price || 0 });
+            });
             setCatalogOpen(null);
           }}
         />
@@ -366,7 +372,7 @@ function CountPicker({ label, max, value, onChange }) {
     <label className="text-sm">
       <span className="text-gray-800">{label}</span>
       <select
-        className="mt-1 w-full rounded-lg border px-3 py-2"
+        className="mt-1 w-full rounded-lg border px-3 py-2 text-gray-900"
         value={value}
         onChange={(e) => onChange(clamp(+e.target.value || 0, 0, max))}
       >
@@ -401,7 +407,7 @@ function CategoryCard({
   return (
     <div className="rounded-2xl border p-5 bg-white space-y-4">
       <div className="flex items-center justify-between">
-        <div className="font-medium">{title}</div>
+        <div className="font-medium text-gray-900">{title}</div>
         <div className="flex gap-2">
           <ModeBtn active={mode === "catalog"} onClick={() => onModeChange("catalog")}>
             {t("openings.mode.catalog", { defaultValue: "Välj från vår katalog" })}
@@ -484,7 +490,7 @@ function CategoryCard({
               <div className="text-sm text-gray-800">
                 {t("openings.noneSelectedYet", { defaultValue: "Inget valt ännu." })}
               </div>
-              <button type="button" className="mt-2 px-3 py-1.5 rounded-xl border hover:bg-gray-50" onClick={onOpenCatalogNew}>
+              <button type="button" className="mt-2 px-3 py-1.5 rounded-xl border text-gray-900 hover:bg-gray-50" onClick={onOpenCatalogNew}>
                 {t("openings.mode.catalog", { defaultValue: "Välj från vår katalog" })}
               </button>
             </div>
@@ -545,7 +551,7 @@ function MountPicker({ type, value, onChange, onPreview }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium">{t("openings.mountTitle", { defaultValue: "Montering" })}</div>
+      <div className="text-sm font-medium text-gray-900">{t("openings.mountTitle", { defaultValue: "Montering" })}</div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {options.map((opt) => {
           const img = MOUNT_IMG[type]?.[opt.key];
@@ -676,16 +682,16 @@ function CatalogOverlay({ datasetKey, allowedMax, replace = { enabled: false }, 
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t("openings.catalog.searchPlaceholder", { defaultValue: "Sök i namn, märke, modell, specs…" })}
-            className="w-full md:w-80 rounded-xl border px-3 py-2"
+            className="w-full md:w-80 rounded-xl border px-3 py-2 text-gray-900"
           />
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-900">
             {t("openings.catalog.selected", { defaultValue: "Valda:" })} <strong>{selected.length}</strong> / {allowedMax}
           </div>
           <div className="ml-auto flex gap-2">
-            <button type="button" className="px-3 py-1.5 rounded-xl border hover:bg-gray-50" onClick={() => setSelected([])}>
+            <button type="button" className="px-3 py-1.5 rounded-xl border text-gray-900 hover:bg-gray-50" onClick={() => setSelected([])}>
               {t("openings.actions.clearSelection", { defaultValue: "Rensa val" })}
             </button>
-            <button type="button" className="px-3 py-1.5 rounded-xl border bg-emerald-50 border-emerald-300" onClick={() => onCommit?.(selected)}>
+            <button type="button" className="px-3 py-1.5 rounded-xl border text-emerald-700 bg-emerald-50 border-emerald-300" onClick={() => onCommit?.(selected)}>
               {t("openings.actions.saveSelection", { defaultValue: "Spara val" })}
             </button>
           </div>
@@ -763,27 +769,27 @@ function CatalogCard({ item, onSelect, replaceMode }) {
       </div>
 
       <div className="p-3 flex-1 flex flex-col">
-        <div className="text-xs text-gray-500">{item.brand || item.category || ""}</div>
-        <div className="font-medium">{item.name}</div>
-        {item.model && <div className="text-sm text-gray-600">{item.model}</div>}
+        <div className="text-xs text-gray-700">{item.brand || item.category || ""}</div>
+        <div className="font-medium text-gray-900">{item.name}</div>
+        {item.model && <div className="text-sm text-gray-700">{item.model}</div>}
 
         {price && (
-          <div className="mt-1 text-sm font-semibold">
+          <div className="mt-1 text-sm font-semibold text-gray-900">
             {t("openings.catalog.priceFrom", { defaultValue: "Pris från:" })}{" "}
             <span className="font-bold">{String(price)}</span>
           </div>
         )}
 
         {preview.length > 0 && (
-          <ul className="mt-2 space-y-1 text-sm">
+          <ul className="mt-2 space-y-1 text-sm text-gray-900">
             {preview.map(([k, v]) => (
               <li key={k} className="flex gap-1">
-                <span className="text-gray-500">{k}:</span>
-                <span className="font-medium">{String(v)}</span>
+                <span className="text-gray-700">{k}:</span>
+                <span className="font-medium text-gray-900">{String(v)}</span>
               </li>
             ))}
             {hasMore && !open && (
-              <li className="text-xs text-gray-500">
+              <li className="text-xs text-gray-700">
                 {t("openings.catalog.moreSpecs", { defaultValue: "…fler specifikationer" })}
               </li>
             )}
@@ -791,15 +797,15 @@ function CatalogCard({ item, onSelect, replaceMode }) {
         )}
 
         {open && (
-          <div className="mt-3 rounded-lg border p-3 bg-gray-50 text-sm">
+          <div className="mt-3 rounded-lg border p-3 bg-gray-50 text-sm text-gray-900">
             {specsEntries.length > 0 ? (
               <>
-                <div className="font-medium mb-1">{t("openings.catalog.allSpecs", { defaultValue: "Alla specifikationer" })}</div>
+                <div className="font-medium mb-1 text-gray-900">{t("openings.catalog.allSpecs", { defaultValue: "Alla specifikationer" })}</div>
                 <ul className="space-y-1">
                   {specsEntries.map(([k, v]) => (
                     <li key={k} className="flex gap-1">
-                      <span className="text-gray-500">{k}:</span>
-                      <span className="font-medium">{String(v)}</span>
+                      <span className="text-gray-700">{k}:</span>
+                      <span className="font-medium text-gray-900">{String(v)}</span>
                     </li>
                   ))}
                 </ul>
@@ -808,7 +814,7 @@ function CatalogCard({ item, onSelect, replaceMode }) {
               <div className="text-gray-600">{t("openings.catalog.noSpecs", { defaultValue: "Specifikationer saknas." })}</div>
             )}
             {item.category ? (
-              <div className="mt-2 text-xs text-gray-500">
+              <div className="mt-2 text-xs text-gray-700">
                 <span className="font-medium">{t("openings.catalog.category", { defaultValue: "Kategori:" })}</span>{" "}
                 {item.category}
               </div>

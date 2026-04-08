@@ -817,7 +817,8 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       calculatorOpens, offerSubmits,
       topPages, topEvents, dailyChats, popularQuestions,
       geoCountries, geoCities, handoverSessions, deviceStats,
-      referrers, peakHours, dailyPageViews, kitchenRenders, topMaterials,
+      referrers, peakHours, dailyPageViews, kitchenRenders, topMaterials, topAccessories,
+      offerOpens, priceViews, activityByHour, timeOnPage,
     ] = await Promise.all([
       query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'page_view' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`SELECT COUNT(DISTINCT session_id) AS total FROM analytics_events WHERE created_at > NOW() - INTERVAL '${interval}' AND session_id IS NOT NULL`),
@@ -905,14 +906,41 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
           AND data->>'material' IS NOT NULL
         GROUP BY material ORDER BY selections DESC LIMIT 20
       `),
+      query(`
+        SELECT data->>'type' AS type, data->>'name' AS name, COUNT(*) AS selections
+        FROM analytics_events
+        WHERE event = 'accessory_selected'
+          AND created_at > NOW() - INTERVAL '${interval}'
+          AND data->>'name' IS NOT NULL
+        GROUP BY type, name ORDER BY type, selections DESC
+      `),
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'offert_open' AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`SELECT COUNT(*) AS total FROM analytics_events WHERE event = 'price_viewed' AND created_at > NOW() - INTERVAL '${interval}'`),
+      query(`
+        SELECT
+          EXTRACT(HOUR FROM created_at AT TIME ZONE 'Europe/Stockholm') AS hour,
+          COUNT(*) AS visits
+        FROM analytics_events
+        WHERE created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY hour ORDER BY hour ASC
+      `),
+      query(`
+        SELECT page, AVG((data->>'time_ms')::numeric) / 1000 AS avg_sec, COUNT(*) AS exits
+        FROM analytics_events
+        WHERE event = 'page_exit' AND data->>'time_ms' IS NOT NULL
+          AND created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY page ORDER BY avg_sec DESC LIMIT 10
+      `),
     ]);
 
-    const pv     = Number(pageViews.rows[0]?.total || 0);
-    const calc   = Number(calculatorOpens.rows[0]?.total || 0);
-    const matSel = Number(topMaterials.rows.reduce((s, r) => s + Number(r.selections), 0));
-    const offer  = Number(offerSubmits.rows[0]?.total || 0);
-    const cont   = Number(contacts.rows[0]?.total || 0);
-    const chats  = Number(chatSessions.rows[0]?.total || 0);
+    const pv        = Number(pageViews.rows[0]?.total || 0);
+    const calc      = Number(calculatorOpens.rows[0]?.total || 0);
+    const matSel    = Number(topMaterials.rows.reduce((s, r) => s + Number(r.selections), 0));
+    const pvSeen    = Number(priceViews.rows[0]?.total || 0);
+    const offerOpen = Number(offerOpens.rows[0]?.total || 0);
+    const offer     = Number(offerSubmits.rows[0]?.total || 0);
+    const cont      = Number(contacts.rows[0]?.total || 0);
+    const chats     = Number(chatSessions.rows[0]?.total || 0);
 
     res.json({
       totalPageViews:    pv,
@@ -924,12 +952,19 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
       handoverSessions:  Number(handoverSessions.rows[0]?.total || 0),
       kitchenRenders:    Number(kitchenRenders.rows[0]?.total || 0),
       topMaterials:      topMaterials.rows,
+      topAccessories:    topAccessories.rows,
+      offerOpens:        Number(offerOpens.rows[0]?.total || 0),
+      priceViews:        Number(priceViews.rows[0]?.total || 0),
+      activityByHour:    activityByHour.rows,
+      timeOnPage:        timeOnPage.rows,
       funnel: [
-        { label: "Sidvisningar",            value: pv,     pct: 100 },
-        { label: "Kalkylator öppnad",        value: calc,   pct: pv     ? Math.round(calc   / pv     * 100) : 0 },
-        { label: "Material valt",            value: matSel, pct: calc   ? Math.round(matSel / calc   * 100) : 0 },
-        { label: "Offert begärd",            value: offer,  pct: matSel ? Math.round(offer  / matSel * 100) : 0 },
-        { label: "Kontaktuppgifter lämnade", value: cont,   pct: offer  ? Math.round(cont   / offer  * 100) : 0 },
+        { label: "Sidvisningar",              value: pv,        pct: 100 },
+        { label: "Kalkylator öppnad",          value: calc,      pct: pv        ? Math.round(calc      / pv        * 100) : 0 },
+        { label: "Material valt",              value: matSel,    pct: calc      ? Math.round(matSel    / calc      * 100) : 0 },
+        { label: "Pris sett (ej skickat)",     value: pvSeen,    pct: matSel    ? Math.round(pvSeen    / matSel    * 100) : 0 },
+        { label: "Offert öppnad",              value: offerOpen, pct: pvSeen    ? Math.round(offerOpen / pvSeen    * 100) : 0 },
+        { label: "Offert skickad",             value: offer,     pct: offerOpen ? Math.round(offer     / offerOpen * 100) : 0 },
+        { label: "Kontaktuppgifter lämnade",   value: cont,      pct: offer     ? Math.round(cont      / offer     * 100) : 0 },
       ],
       topPages:          topPages.rows,
       topEvents:         topEvents.rows,
@@ -1046,6 +1081,19 @@ app.get("/api/admin/analytics/drilldown", adminAuth, async (req, res) => {
         ORDER BY created_at DESC LIMIT 200
       `);
       rows = r.rows.map(x => [x.created_at, x.data?.material || "—", x.data?.mode || "—", x.data?.shape || "—", x.data?.thicknessMm ? x.data.thicknessMm + "mm" : "—", x.country || "—"]);
+
+    } else if (kpi === "accessories_sink" || kpi === "accessories_faucet" || kpi === "accessories_hob") {
+      const typeMap = { accessories_sink: "sink", accessories_faucet: "faucet", accessories_hob: "hob" };
+      const type = typeMap[kpi];
+      columns = ["Tid", "Produkt", "Pris", "Land"];
+      const r = await query(`
+        SELECT created_at, data, country
+        FROM analytics_events
+        WHERE event = 'accessory_selected' AND data->>'type' = $1
+          AND created_at > NOW() - INTERVAL '${interval}'
+        ORDER BY created_at DESC LIMIT 200
+      `, [type]);
+      rows = r.rows.map(x => [x.created_at, x.data?.name || "—", x.data?.price ? x.data.price + " kr" : "—", x.country || "—"]);
     }
 
     res.json({ columns, rows });

@@ -1,5 +1,6 @@
 // Path: src/pages/CalculatorPage.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { trackEvent } from "../lib/analytics";
 import { useTranslation } from "react-i18next";
 import MeasurementGuide from "../components/MeasurementGuide";
 import MaterialsSection from "../components/MaterialsSection";
@@ -375,6 +376,20 @@ function resetFormCompletely() {
   const vat = totals?.summary?.vat ?? 0;
   const total = totals?.summary?.total ?? 0;
   const stoneBundle = Math.max(0, subtotal - (accessoriesTotal || 0));
+
+  // Track price_viewed: debounced, only when material + price are set
+  const priceTrackTimer = useRef(null);
+  const lastTrackedTotal = useRef(0);
+  useEffect(() => {
+    if (!variant?.name || total <= 0) return;
+    if (Math.abs(total - lastTrackedTotal.current) < 100) return; // skip tiny changes
+    clearTimeout(priceTrackTimer.current);
+    priceTrackTimer.current = setTimeout(() => {
+      lastTrackedTotal.current = total;
+      trackEvent("price_viewed", { material: variant.name, total: Math.round(total), shape });
+    }, 3000); // fire after 3s of no changes
+    return () => clearTimeout(priceTrackTimer.current);
+  }, [total, variant?.name, shape]);
 
   // Lista "valda tillval" (robust)
   const pickedItems = useMemo(() => {

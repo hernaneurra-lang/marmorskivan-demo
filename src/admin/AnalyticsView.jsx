@@ -407,27 +407,59 @@ export default function AnalyticsView({ headers, apiBase }) {
               </div>
             </div>
 
-            {/* Top materials */}
-            {data?.topMaterials?.length > 0 && (
-              <div className="admin-card">
-                <div className="admin-card-title">🪨 Top 20 — mest valda material</div>
-                <ul className="analytics-list bar-list">
-                  {(() => {
-                    const max = Math.max(...data.topMaterials.map((m) => Number(m.selections)), 1);
-                    return data.topMaterials.map((m, i) => (
-                      <li key={m.material} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
-                        <span style={{ color: "var(--muted)", fontSize: 12, width: 20, flexShrink: 0 }}>#{i + 1}</span>
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.material}</span>
-                        <div style={{ width: 80, height: 6, background: "var(--border)", borderRadius: 3, flexShrink: 0 }}>
-                          <div style={{ width: `${Math.round(Number(m.selections) / max * 100)}%`, height: "100%", background: "#10b981", borderRadius: 3 }} />
-                        </div>
-                        <span style={{ color: "var(--muted)", fontSize: 12, width: 28, textAlign: "right", flexShrink: 0 }}>{m.selections}</span>
-                      </li>
-                    ));
-                  })()}
-                </ul>
+            {/* Top materials + Accessories grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              {data?.topMaterials?.length > 0 && (
+                <div className="admin-card" style={{ cursor: "pointer" }} onClick={() => dd("materials_detail", "Material — detaljer")}>
+                  <div className="admin-card-title">🪨 Top 20 — mest valda material <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>klicka för detaljer</span></div>
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                    {(() => {
+                      const max = Math.max(...data.topMaterials.map((m) => Number(m.selections)), 1);
+                      return data.topMaterials.map((m, i) => (
+                        <li key={m.material} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
+                          <span style={{ color: "var(--muted)", fontSize: 12, width: 20, flexShrink: 0 }}>#{i + 1}</span>
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.material}</span>
+                          <div style={{ width: 80, height: 6, background: "var(--border)", borderRadius: 3, flexShrink: 0 }}>
+                            <div style={{ width: `${Math.round(Number(m.selections) / max * 100)}%`, height: "100%", background: "#10b981", borderRadius: 3 }} />
+                          </div>
+                          <span style={{ color: "var(--muted)", fontSize: 12, width: 28, textAlign: "right", flexShrink: 0 }}>{m.selections}</span>
+                        </li>
+                      ));
+                    })()}
+                  </ul>
+                </div>
+              )}
+
+              {/* Accessories — sink, faucet, hob */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {[
+                  { type: "sink",   label: "🚰 Diskhoar",  kpi: "accessories_sink",   color: "#3b82f6" },
+                  { type: "faucet", label: "🔧 Kranar",     kpi: "accessories_faucet", color: "#8b5cf6" },
+                  { type: "hob",    label: "🔥 Hällar",     kpi: "accessories_hob",    color: "#f59e0b" },
+                ].map(({ type, label, kpi: accKpi, color }) => {
+                  const items = (data?.topAccessories || []).filter(a => a.type === type);
+                  if (!items.length) return null;
+                  const max = Math.max(...items.map(a => Number(a.selections)), 1);
+                  return (
+                    <div key={type} className="admin-card" style={{ cursor: "pointer" }} onClick={() => dd(accKpi, label)}>
+                      <div className="admin-card-title">{label} <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>klicka för detaljer</span></div>
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                        {items.slice(0, 8).map((a, i) => (
+                          <li key={a.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid var(--border)" }}>
+                            <span style={{ color: "var(--muted)", fontSize: 12, width: 20, flexShrink: 0 }}>#{i + 1}</span>
+                            <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+                            <div style={{ width: 60, height: 5, background: "var(--border)", borderRadius: 3, flexShrink: 0 }}>
+                              <div style={{ width: `${Math.round(Number(a.selections) / max * 100)}%`, height: "100%", background: color, borderRadius: 3 }} />
+                            </div>
+                            <span style={{ color: "var(--muted)", fontSize: 12, width: 24, textAlign: "right", flexShrink: 0 }}>{a.selections}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
             {/* Daily chats bar chart (CSS) */}
             <div className="admin-card">
@@ -601,23 +633,25 @@ export default function AnalyticsView({ headers, apiBase }) {
               </div>
 
               <div className="admin-card">
-                <div className="admin-card-title">🕐 Trafik per timme (Stockholm)</div>
-                {data?.peakHours?.length ? (
-                  <div className="bar-chart" style={{ height: 80 }}>
+                <div className="admin-card-title">🕐 All aktivitet per timme (Stockholm)</div>
+                {(data?.activityByHour || data?.peakHours)?.length ? (
+                  <div className="bar-chart" style={{ height: 90 }}>
                     {(() => {
-                      const max = Math.max(...data.peakHours.map((h) => Number(h.visits)), 1);
+                      const hours = data.activityByHour || data.peakHours;
+                      const max = Math.max(...hours.map((h) => Number(h.visits)), 1);
                       return Array.from({ length: 24 }, (_, i) => {
-                        const entry = data.peakHours.find((h) => Number(h.hour) === i);
+                        const entry = hours.find((h) => Math.floor(Number(h.hour)) === i);
                         const val = entry ? Number(entry.visits) : 0;
+                        const isTop = val === max && val > 0;
                         return (
                           <div key={i} className="bar-col">
                             <div
                               className="bar-col-bar"
-                              style={{ height: `${Math.round(val / max * 100)}%`, background: "#f59e0b" }}
-                              title={`${i}:00 — ${val} besök`}
+                              style={{ height: `${Math.round(val / max * 100)}%`, background: isTop ? "#f59e0b" : "#3b82f6" }}
+                              title={`${i}:00 — ${val} händelser`}
                             />
                             <div className="bar-col-label" style={{ fontSize: 8 }}>
-                              {i % 4 === 0 ? `${i}h` : ""}
+                              {i % 3 === 0 ? `${i}h` : ""}
                             </div>
                           </div>
                         );
@@ -627,6 +661,35 @@ export default function AnalyticsView({ headers, apiBase }) {
                 ) : <div style={{ color: "var(--muted)", fontSize: 13 }}>Ingen data</div>}
               </div>
             </div>
+
+            {/* Tid på sida */}
+            {data?.timeOnPage?.length > 0 && (
+              <div className="admin-card">
+                <div className="admin-card-title">⏱️ Genomsnittlig tid på sida</div>
+                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                  {(() => {
+                    const max = Math.max(...data.timeOnPage.map(r => Number(r.avg_sec)), 1);
+                    return data.timeOnPage.map((r, i) => {
+                      const sec = Math.round(Number(r.avg_sec));
+                      const mm = Math.floor(sec / 60);
+                      const ss = sec % 60;
+                      return (
+                        <li key={r.page} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
+                          <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.page || "/"}</span>
+                          <div style={{ width: 100, height: 6, background: "var(--border)", borderRadius: 3, flexShrink: 0 }}>
+                            <div style={{ width: `${Math.round(Number(r.avg_sec) / max * 100)}%`, height: "100%", background: "#6366f1", borderRadius: 3 }} />
+                          </div>
+                          <span style={{ color: "var(--muted)", fontSize: 12, width: 48, textAlign: "right", flexShrink: 0 }}>
+                            {mm > 0 ? `${mm}m ${ss}s` : `${ss}s`}
+                          </span>
+                          <span style={{ color: "var(--muted)", fontSize: 11, width: 40, textAlign: "right", flexShrink: 0 }}>({r.exits} ex.)</span>
+                        </li>
+                      );
+                    });
+                  })()}
+                </ul>
+              </div>
+            )}
 
             {/* AI Insights */}
             <div className="admin-card">
