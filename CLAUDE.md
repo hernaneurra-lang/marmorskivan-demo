@@ -3,74 +3,92 @@
 ## Stack
 - **Frontend**: Vite + React SPA → FTP deploy till Loopia (statisk)
 - **Backend**: Express.js + PostgreSQL → Railway (auto-deploy från GitHub `main`)
-- **Build**: `npm run build` (Vite + prerender ~10 min) | `npm run build:justvite` (bara Vite, ~15s, för snabb kompilkontroll)
+- **Build**: `npm run build` (Vite + prerender ~10 min) | `npm run build:noprerender` (~2 min) | `npm run build:justvite` (~15s, snabb kompilkontroll)
 
 ## Deploy
-1. `npm run build` → genererar `dist/`
-2. FTP via **WinSCP**: ta bort `assets/` på servern först, sedan Synchronize (Remote) — laddar bara upp ändrade filer
+1. `npm run build:noprerender` → genererar `dist/`
+2. FTP via **WinSCP**: ta bort `assets/` på servern, sedan Synchronize (Remote)
 3. PHP-filer (`api/`, `boka-tid/`, `PHPMailer/`, `includes/`, `storage/`, `vendor/`) ska **aldrig** raderas — de ligger på samma Loopia-server
 
 ## Railway — backend
-- Backend körs på Railway, auto-deploy från `main`
+- Backend körs på Railway, auto-deploy från `main` vid `git push`
 - **Kräver** env var `DATABASE_URL` (PostgreSQL) — utan den sparas ingenting (`db: false`)
-- Lägg till PostgreSQL-databas i Railway-projektet → `DATABASE_URL` sätts automatiskt
 - Env vars: `ADMIN_TOKEN` (default: `marmorskivan-admin`), `OPENAI_API_KEY`, `PORT`
-- Email env vars (optional): `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` (`"true"` for port 465), `COMPANY_EMAIL` (recipient for alerts)
-- Email features: booking confirmation + .ics to customer, booking notification to company, first-message chat alert to company
+- Email env vars (optional): `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` (`"true"` for port 465), `COMPANY_EMAIL`
+- Email features: booking confirmation + .ics to customer, notification to company, first-message chat alert
 - Health check: `GET /health` → `{ ok: true, db: true/false }`
 
 ## Settings (ingen rebuild krävs)
-Alla inställningar hämtas via `/api/settings` vid runtime. Ändringar i admin-panelen slår igenom direkt utan ny build.
+Alla inställningar hämtas via `/api/settings` vid runtime. Ändringar i admin-panelen slår igenom direkt.
 
 Nyckel-inställningar:
 - `accent_color` — accentfärg (knappar, CTA)
 - `nav_cta_text` — text på CTA-knapp i navbar
 - `company`, `tagline`, `phone`, `email`, `address`, `hours` — visas i SiteFooter
 - `chat_bot_avatar_url` — bild-URL för bot-avatar (åsidosätter emoji)
-- `agent_avatar_url` — bild-URL för agentens profilbild (åsidosätter emoji)
+- `agent_avatar_url` — bild-URL för agentens profilbild
 - `chat_online` — `"true"/"false"` styr om chattwidgeten visas
 
-## Admin-panel (`/admin`)
-Sju vyer: Dashboard, Chattar, Kontakter, Analytics, Rapporter, Kunskapsbas, Inställningar.
+## Admin-panel (`/admin`) — 9 vyer
+Dashboard, Chattar, Kontakter, Analytics, Produkter, Rapporter, Kunskapsbas, Bokningar, Inställningar.
 
 ### Chat-system (SessionsView)
-- **Handover**: Knapp "🤝 Ta över" → sätter session till `mode=agent` → AI slutar svara → agent chattar direkt med kunden
-- **Typing-indikator**: Rörliga prickar visas när kunden skriver (poll var 2s)
+- **Handover**: "🤝 Ta över" → `mode=agent` → AI slutar svara → agent chattar manuellt
+- **Typing-indikator**: Rörliga prickar när kunden skriver (poll var 2s)
 - **Tags**: 6 preset-taggar per session (Lead, Hög prio, Följ upp, Offert, Reklamation, Nöjd kund)
 - **⚡ Snabbsvar**: Canned responses — klicka för att klistra in
-- **📚 Kunskapsbas**: Sökbar FAQ-panel i reply-boxen — klicka för att klistra in svar
-- **Geo-info**: Stad + land visas i session-headern (från IP-lookup)
+- **📚 Kunskapsbas**: Sökbar FAQ-panel i reply-boxen
+- **Geo-info**: Stad + land visas i session-headern
 - **Anteckningar**: Interna notes per session (syns ej för kunden)
 - **Status/prio**: Öppen/Avslutad + Normal/Hög/Brådskande
 
 ### Analytics (AnalyticsView)
-- KPI-kort: Sidvisningar, Unika sessioner, Chattsessioner, Kalkylator, Offerter, Kontakter, **Handover till agent**, AI-renderingar
-- Konverteringstratt (funnel)
-- Chattsessioner per dag (CSS bar chart)
-- **Geo-analytics**: Besökare per land (med flaggor) + populäraste städer
-- Händelsetyper + vanligaste frågor
-- **AI-insikter**: Automatisk analys av besökarsegment, peak hour, chattengagemang, avhoppsfrekvens
+- KPI-kort — **alla klickbara** → drill-down modal med upp till 200 rader rådata
+- Konverteringstratt med 7 steg (se nedan)
+- Geo: land + stad med flaggor
+- All aktivitet per timme (Stockholm-tid), tid på sida per sida
+- AI-insikter: besökarsegment, anomali, peak hour, chattengagemang
 
-### Analytics-events (full täckning fr.o.m. 2026-04)
-Alla användarinteraktioner loggas via `trackEvent()` i `src/lib/analytics.js`:
-| Event | Trigger |
-|---|---|
-| `page_view` | Varje route-byte (Router.jsx) |
-| `cta_click` | Landing-sidans knappar |
-| `calculator_open` | Kalkylatorn visas |
-| `material_selected` | Material väljs (inkl. namn + pris) |
-| `kitchen_render` | AI-rendering startad (material, mode, shape) |
-| `chat_open` | Chattwidgeten öppnas |
-| `chat_message` | Meddelande skickat |
-| `contact_form_open` | "Lämna kontaktuppgifter" klickas |
-| `contact_form_submit` | Kontaktformulär skickat |
-| `booking_open` | "Boka tid" klickas |
-| `offert_open` / `offert_submit_*` | Offertflödet (SubmitBox) |
+### Produkter & Konvertering (ProductsView)
+- **SVG donut-ringar** per funnel-steg med % och antal
+- Konverteringsnyckeltal: avhopp, kalkylator→material, pris sett→ej offert, offert→skickad (färgkodade rött/gult/grönt)
+- Top 20 klickade material med drill-down
+- Top diskhoar / kranar / hällar var för sig med drill-down
+- Köksrenderingar med % av kalkylatorsessioner
 
 ### AI-chatt (server-logik)
-1. **Knowledge base keyword-match** körs FÖRE OpenAI — om ≥2 nyckelord matchar returneras KB-svar direkt (snabbare + billigare)
+1. **Knowledge base keyword-match** körs FÖRE OpenAI — om ≥2 nyckelord matchar returneras KB-svar direkt
 2. **KB-kontext** injiceras alltid i OpenAI system prompt (max 30 aktiva poster)
-3. **Agent mode-check**: Om session är `mode=agent` → AI svarar INTE — agenten svarar manuellt
+3. **Agent mode-check**: Om `mode=agent` → AI svarar INTE
+
+## Analytics-events (full täckning fr.o.m. 2026-04)
+
+| Event | Trigger | Fil |
+|---|---|---|
+| `page_view` | Varje route-byte | Router.jsx |
+| `page_exit` | Lämnar sida (tid + scroll) | analytics.js (auto) |
+| `cta_click` | Landing-CTA | Landing.jsx |
+| `calculator_open` | Kalkylatorn visas | App.jsx |
+| `material_selected` | Material väljs (namn + pris) | App.jsx |
+| `price_viewed` | Pris visas 3s utan att skickas (debounced) | CalculatorPage.jsx |
+| `accessory_selected` | Diskho/kran/häll väljs från katalog | OpeningsSection.jsx |
+| `kitchen_render` | AI-rendering körs (mode, material, shape) | KitchenVisualizer.jsx |
+| `offert_open` | Offertformulär öppnas | SubmitBox.jsx |
+| `offert_submit_success` | Offert skickad | SubmitBox.jsx |
+| `chat_open` | Chattwidget öppnas | ChatWidget.jsx |
+| `chat_message` | Meddelande skickat | ChatWidget.jsx |
+| `contact_form_open` | Kontaktformulär öppnas | ChatWidget.jsx |
+| `contact_form_submit` | Formulär skickat | ChatWidget.jsx |
+| `booking_open` | Bokningsmodal öppnas | ChatWidget.jsx |
+
+### Konverteringstratt (7 steg)
+```
+Sidvisningar → Kalkylator → Material valt → Pris sett → Offert öppnad → Offert skickad → Kontakt
+```
+
+### Drill-down API
+`GET /api/admin/analytics/drilldown?kpi=<typ>&period=<period>`
+KPI-typer: `pageviews`, `sessions`, `chats`, `calculator`, `offers`, `contacts`, `handover`, `renders`, `accessories_sink`, `accessories_faucet`, `accessories_hob`
 
 ## Knappdesign (kalkylator)
 - **Aktiv**: `bg-emerald-600 border-emerald-600 text-white shadow-md`
@@ -84,38 +102,29 @@ Alla användarinteraktioner loggas via `trackEvent()` i `src/lib/analytics.js`:
 
 ## ChatWidget (`src/chat/ChatWidget.jsx`)
 - `AvatarEl`-komponent: renderar `<img>` om URL finns, annars emoji
-- Mode-polling var 5s: när `mode=agent` → heading ändras, placeholder ändras, AI-svar stoppas
+- Mode-polling var 5s: när `mode=agent` → heading ändras, AI-svar stoppas
 - Typing-events skickas vid input (`POST /api/chat/typing`, debounce 3s)
-- Handover-meddelande visas automatiskt för kunden vid mode-byte
+
+## KitchenVisualizer (`src/components/KitchenVisualizer.jsx`)
+- Upload eget köksfoto → markera bänkyta med flood fill → AI inpainting med gpt-image-1
+- **Fill-verktyg**: klicka på yta → BFS flood fill tolerans 38, dilate 2px + hole-fill
+- **Erase-verktyg**: penselradering radius 20px via Pointer Events API
+- **Compositing**: AI-bild skalas till originalets exakta dimensioner med `drawImage()` → pixels compositas per mask-koordinat (garanterar att inget utanför masken ändras)
+- Canvas-storlek sätts i JSX `style`-prop (inte useEffect) — React nollställer annars CSS-värden
 
 ## Geo-analytics
-- Lookup via `http://ip-api.com/json/{ip}` (gratis, ej HTTPS, ej street-level)
-- Returnerar: land, landkod, stad, region, postnummer, lat/lon
+- Lookup via `http://ip-api.com/json/{ip}` (gratis, ej HTTPS, server-side only)
 - Cachas i minnet 1h per IP
-- Lagras i `chat_sessions`: `country`, `country_code`, `city`, `region`
-- Visas i AnalyticsView med landflaggor (flagcdn.com)
+- Lagras på varje `analytics_events`-rad: `country`, `city`
+- Lagras på `chat_sessions`: `country`, `country_code`, `city`, `region`
 
 ## DB-schema (PostgreSQL via Railway)
 Tabeller: `chat_sessions`, `chat_messages`, `analytics_events`, `contacts`, `site_settings`, `canned_responses`, `knowledge_base`
 
-Nya kolumner (2025-03):
-- `chat_sessions`: `mode TEXT DEFAULT 'bot'`, `country`, `country_code`, `city`, `region`, `tags TEXT DEFAULT '[]'`
-- `analytics_events`: `country`, `city`
-
 Migrationer körs automatiskt vid serverstart (`migrate()` i `db.mjs`).
 
-## KitchenVisualizer (`src/components/KitchenVisualizer.jsx`)
-- Upload eget köksfoto → markera bänkyta med flood fill-verktyg → AI inpainting med gpt-image-1
-- **Fill-verktyg**: klicka på yta → flood fill med tolerans 38, dilate + hole-fill
-- **Erase-verktyg**: penselborttagning (radius 20px) via Pointer Events API
-- **Inpaint-logik**: markerade pixlar görs transparenta → skickas som PNG → AI fyller hålet
-- **Compositing**: AI-bilden skalas till originalets dimensioner och pixels compositas per mask-koordinat
-- Canvas-storlek sätts i JSX `style`-prop (inte useEffect) så React inte nollställer den
-- Trackar `kitchen_render` med mode (`generate`/`edit`/`mask`), material, shape, thickness
-
 ## Viktigt
-- **recharts är borttaget** — inkompatibelt med Vite manual chunk splitting. Använd CSS bar charts (klasser: `.bar-chart`, `.bar-col`, `.bar-col-bar` i `admin.css`)
-- **ip-api.com** använder HTTP (ej HTTPS) — ok för server-side anrop, ej för klienten
-- **Street-level geo från IP är omöjligt** — ISP:er äger IP-block, inte adresser
+- **recharts är borttaget** — använd CSS bar charts (`.bar-chart`, `.bar-col`, `.bar-col-bar` i `admin.css`) eller SVG inline
+- **ip-api.com** använder HTTP — ok server-side, aldrig klient-side
+- **Canvas vs img**: `max-h-full` fungerar inte reliabelt på `<canvas>` — beräkna CSS-storlek explicit: `Math.min(innerWidth/w, (innerHeight-64)/h)`
 - `VITE_CHAT_API_BASE` i `.env` pekar på Railway-URL för lokal utveckling
-- **Canvas vs img**: `max-h-full` fungerar inte reliabelt på `<canvas>` — beräkna CSS-storlek explicit i render (`Math.min(innerWidth/w, (innerHeight-64)/h) * scale`)
