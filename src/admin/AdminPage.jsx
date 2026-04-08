@@ -9,6 +9,7 @@ import ReportsView from "./ReportsView.jsx";
 import KnowledgeBaseView from "./KnowledgeBaseView.jsx";
 import SettingsView from "./SettingsView.jsx";
 import BookingView from "./BookingView.jsx";
+import ProductsView from "./ProductsView.jsx";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 const TOKEN_KEY = "ms_admin_token";
@@ -89,6 +90,7 @@ const NAV = [
   { key: "sessions",   icon: "💬", label: "Chattar" },
   { key: "contacts",   icon: "📞", label: "Kontakter" },
   { key: "analytics",  icon: "📊", label: "Analytics" },
+  { key: "products",   icon: "🛍️", label: "Produkter" },
   { key: "reports",    icon: "📥", label: "Rapporter" },
   { key: "knowledge",  icon: "📚", label: "Kunskapsbas" },
   { key: "bookings",   icon: "📅", label: "Bokningar" },
@@ -158,6 +160,7 @@ export default function AdminPage() {
           {view === "sessions"   && <SessionsView     headers={headers} apiBase={API_BASE} />}
           {view === "contacts"   && <ContactsView     headers={headers} apiBase={API_BASE} />}
           {view === "analytics"  && <AnalyticsView    headers={headers} apiBase={API_BASE} />}
+          {view === "products"   && <ProductsView     headers={headers} apiBase={API_BASE} />}
           {view === "reports"    && <ReportsView      headers={headers} apiBase={API_BASE} />}
           {view === "knowledge"  && <KnowledgeBaseView headers={headers} apiBase={API_BASE} />}
           {view === "bookings"   && <BookingView      headers={headers} apiBase={API_BASE} />}
