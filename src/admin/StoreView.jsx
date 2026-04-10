@@ -2,75 +2,36 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "./AdminPage.jsx";
 
-// Shared image uploader component
-function ImageUploader({ value, onChange, headers, apiBase }) {
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef();
-
-  async function handleFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const data = ev.target.result; // data:image/...;base64,...
-        const res = await fetch(`${apiBase}/api/admin/upload-image`, {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({ data, filename: file.name }),
-        });
-        const json = await res.json();
-        if (json.url) onChange(json.url);
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setUploading(false);
-    }
-  }
-
-  const src = value?.startsWith("http") || value?.startsWith("/") ? value : null;
-
+// Image field with preview — paste URL after FTP upload to Loopia
+function ImageUploader({ value, onChange }) {
+  const src = value || null;
   return (
     <div style={{ marginBottom: 14 }}>
       <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", opacity: 0.75, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>
         Bild
       </label>
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        {/* Preview */}
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         <div style={{
-          width: 96, height: 72, borderRadius: 8, border: "1px solid var(--border)",
+          width: 100, height: 76, borderRadius: 8, border: "1px solid var(--border)",
           background: "var(--surface2)", flexShrink: 0, overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           {src
-            ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <span style={{ fontSize: 24, opacity: 0.3 }}>🖼️</span>
+            ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+            : <span style={{ fontSize: 28, opacity: 0.25 }}>🖼️</span>
           }
         </div>
-        {/* Controls */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ flex: 1 }}>
           <input
             className="admin-input"
-            style={{ marginBottom: 0, fontSize: 12 }}
-            placeholder="URL — t.ex. /materials/Bild.jpg"
-            value={value || ""}
+            style={{ marginBottom: 4, fontSize: 12 }}
+            placeholder="/materials/Bild.jpg  eller  /products/Bild.jpg"
+            value={src || ""}
             onChange={e => onChange(e.target.value)}
           />
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button
-              type="button"
-              className="admin-btn-secondary"
-              style={{ fontSize: 12, padding: "4px 12px", flexShrink: 0 }}
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? "Laddar upp…" : "📁 Ladda upp bild"}
-            </button>
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>jpg/png/webp, max 10 MB</span>
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>
+            Ladda upp via FTP till Loopia → klistra in sökvägen ovan
           </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
         </div>
       </div>
     </div>
@@ -365,7 +326,6 @@ function StonesTab({ headers, apiBase }) {
           product={editing}
           onSave={patch => patchProduct(editing.id, patch)}
           onClose={() => setEditing(null)}
-          headers={headers} apiBase={apiBase}
         />
       )}
 
@@ -375,7 +335,6 @@ function StonesTab({ headers, apiBase }) {
           product={null}
           onSave={createProduct}
           onClose={() => setAdding(false)}
-          headers={headers} apiBase={apiBase}
         />
       )}
 
@@ -443,7 +402,7 @@ function toSlug(str) {
     .replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
-function ProductModal({ product, onSave, onClose, headers, apiBase }) {
+function ProductModal({ product, onSave, onClose }) {
   const isNew = !product;
   const [form, setForm] = useState({
     slug:         product?.slug        || "",
@@ -734,10 +693,10 @@ function AccessoriesTab({ headers, apiBase }) {
       )}
 
       {editing && (
-        <AccessoryModal item={editing} type={tab} onSave={d => patch(editing.id, d)} onClose={() => setEditing(null)} headers={headers} apiBase={apiBase} />
+        <AccessoryModal item={editing} type={tab} onSave={d => patch(editing.id, d)} onClose={() => setEditing(null)} />
       )}
       {adding && (
-        <AccessoryModal item={null} type={tab} onSave={create} onClose={() => setAdding(false)} headers={headers} apiBase={apiBase} />
+        <AccessoryModal item={null} type={tab} onSave={create} onClose={() => setAdding(false)} />
       )}
       {confirm && (
         <Confirm
@@ -750,7 +709,7 @@ function AccessoriesTab({ headers, apiBase }) {
   );
 }
 
-function AccessoryModal({ item, type, onSave, onClose, headers, apiBase }) {
+function AccessoryModal({ item, type, onSave, onClose }) {
   const isNew = !item;
   const [form, setForm] = useState({
     slug:       item?.slug       || "",
@@ -1068,7 +1027,6 @@ const TABS = [
 
 export default function StoreView({ headers, apiBase }) {
   const [tab, setTab] = useState("stones");
-
   return (
     <div className="admin-view">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
