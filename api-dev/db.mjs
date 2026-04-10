@@ -555,13 +555,13 @@ async function seedProducts(db) {
 }
 
 async function seedAccessories(db) {
-  const { rows } = await db.query("SELECT COUNT(*) AS n FROM catalog_accessories");
-  if (parseInt(rows[0].n) > 0) return;
+  // Clean up bad rows (empty title from previous bad seed)
+  await db.query(`DELETE FROM catalog_accessories WHERE title = '' OR title IS NULL`);
 
   const types = [
-    { type: "sink",   file: "../src/data/sinks.json" },
-    { type: "faucet", file: "../src/data/faucets.json" },
-    { type: "hob",    file: "../src/data/hobs.json" },
+    { type: "sink",   file: "../public/data/catalog/sinks.json" },
+    { type: "faucet", file: "../public/data/catalog/faucets.json" },
+    { type: "hob",    file: "../public/data/catalog/hobs.json" },
   ];
 
   let total = 0;
@@ -572,27 +572,45 @@ async function seedAccessories(db) {
       continue;
     }
     const items = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    let sortIdx = 0;
     for (const item of items) {
-      if (item.id === "none") continue; // skip placeholder
-      const slug = `${type}-${item.id || item.name?.toLowerCase().replace(/\s+/g, "-")}`;
+      // Skip placeholders / items without a real title
+      if (!item.title || item.title.startsWith("Ingen ") || item.slug === undefined) continue;
+      const slug = `${type}-${item.slug}`;
+      // Parse price from specs e.g. "3276kr"
+      let price = null;
+      if (item.specs?.["Pris från"]) {
+        const m = String(item.specs["Pris från"]).match(/(\d+)/);
+        if (m) price = parseInt(m[1]);
+      }
+      // image: catalog/hobs have filename, sinks/faucets don't
+      const image = item.image ? `/products/${item.image}` : "";
       await db.query(
         `INSERT INTO catalog_accessories
-          (slug, type, title, brand, image, price, active, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-         ON CONFLICT (slug) DO NOTHING`,
+          (slug, type, title, brand, image, price, intro_text, specs, active, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (slug) DO UPDATE SET
+           title = EXCLUDED.title,
+           brand = EXCLUDED.brand,
+           image = EXCLUDED.image,
+           price = EXCLUDED.price,
+           intro_text = EXCLUDED.intro_text,
+           specs = EXCLUDED.specs,
+           updated_at = NOW()`,
         [
-          slug,
-          type,
-          item.name || "",
+          slug, type,
+          item.title || "",
           item.brand || "",
-          item.img || "",
-          item.price || null,
+          image,
+          price,
+          item.intro_text || "",
+          JSON.stringify(item.specs || {}),
           true,
-          9999,
+          sortIdx++,
         ]
       );
       total++;
     }
   }
-  console.log(`✅ Seeded ${total} accessories`);
+  console.log(`✅ Seeded/updated ${total} accessories`);
 }

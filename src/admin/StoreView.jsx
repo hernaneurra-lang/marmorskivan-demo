@@ -360,6 +360,12 @@ function InlineNumber({ value, onSave }) {
   );
 }
 
+function toSlug(str) {
+  return str.toLowerCase().trim()
+    .replace(/[åä]/g, "a").replace(/ö/g, "o")
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+
 function ProductModal({ product, onSave, onClose }) {
   const isNew = !product;
   const [form, setForm] = useState({
@@ -424,7 +430,6 @@ function ProductModal({ product, onSave, onClose }) {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-          {isNew && <Field label="Slug (unikt ID)" field="slug" fullWidth />}
           <Field label="Namn" field="name" />
           <Field label="Basnamn" field="base_name" />
           <div style={{ marginBottom: 14 }}>
@@ -483,6 +488,10 @@ function ProductModal({ product, onSave, onClose }) {
               if (cleaned[f] === "" || cleaned[f] === null || cleaned[f] === undefined) {
                 cleaned[f] = null;
               }
+            }
+            // Auto-generate slug for new products
+            if (isNew && !cleaned.slug) {
+              cleaned.slug = `${toSlug(cleaned.name || "produkt")}__${cleaned.thickness_mm || 20}`;
             }
             onSave(cleaned);
           }}>
@@ -699,7 +708,6 @@ function AccessoryModal({ item, type, onSave, onClose }) {
           </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 22 }}>×</button>
         </div>
-        {isNew && <Field label="Slug (unikt ID)" field="slug" />}
         <Field label="Namn" field="title" />
         <Field label="Märke / Tillverkare" field="brand" />
         <Field label="Bild-URL" field="image" />
@@ -709,7 +717,7 @@ function AccessoryModal({ item, type, onSave, onClose }) {
           <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Beskrivning</label>
           <textarea
             className="reply-input"
-            style={{ minHeight: 60, marginBottom: 0 }}
+            style={{ minHeight: 60, marginBottom: 0, width: "100%" }}
             value={form.intro_text}
             onChange={e => setForm(f => ({ ...f, intro_text: e.target.value }))}
           />
@@ -720,7 +728,14 @@ function AccessoryModal({ item, type, onSave, onClose }) {
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
           <button className="admin-btn-secondary" onClick={onClose}>Avbryt</button>
-          <button className="btn-primary" onClick={() => onSave(form)}>
+          <button className="btn-primary" onClick={() => {
+            const saved = { ...form };
+            if (isNew && !saved.slug) {
+              saved.slug = `${type}-${toSlug(saved.title || "tillval")}-${Date.now()}`;
+            }
+            if (saved.price === "") saved.price = null;
+            onSave(saved);
+          }}>
             {isNew ? "Skapa" : "Spara"}
           </button>
         </div>
