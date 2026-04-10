@@ -34,7 +34,7 @@ function Badge({ color, children }) {
 function Confirm({ message, onConfirm, onCancel }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.6)",
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.88)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
     }}>
       <div style={{ background: "var(--card)", borderRadius: 12, padding: 28, maxWidth: 380, textAlign: "center" }}>
@@ -407,7 +407,7 @@ function ProductModal({ product, onSave, onClose }) {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.65)",
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.88)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9000,
     }}>
       <div style={{
@@ -676,7 +676,7 @@ function AccessoryModal({ item, type, onSave, onClose }) {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.65)",
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.88)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9000,
     }}>
       <div style={{
@@ -874,7 +874,7 @@ function CampaignModal({ campaign, onSave, onClose }) {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.65)",
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.88)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9000,
     }}>
       <div style={{
