@@ -5,6 +5,8 @@
   --bg: #0f1117;
   --surface: #1a1d27;
   --surface2: #222536;
+  --card: #1e2130;
+  --input: #2a2e42;
   --border: #2e3249;
   --text: #e8eaf0;
   --muted: #7c82a0;
@@ -14,11 +16,14 @@
   --blue: #3b82f6;
   --yellow: #f59e0b;
   --purple: #8b5cf6;
+  --input-text: #e8eaf0;
 }
 [data-theme="light"] {
   --bg: #f4f6fa;
   --surface: #ffffff;
   --surface2: #f0f2f7;
+  --card: #ffffff;
+  --input: #ffffff;
   --border: #dde1ec;
   --text: #1a1d27;
   --muted: #6b7280;
@@ -28,6 +33,7 @@
   --blue: #2563eb;
   --yellow: #d97706;
   --purple: #7c3aed;
+  --input-text: #1a1d27;
 }
 
 body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 14px; }
@@ -224,9 +230,9 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 /* ── Reply box ── */
 .reply-box { padding: 12px 14px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 8px; align-items: flex-end; }
 .reply-input {
-  flex: 1; background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text); border-radius: 8px; padding: 9px 13px;
-  font-size: 13px; resize: none; outline: none; font-family: inherit;
+  flex: 1; background: var(--input); border: 1px solid var(--border);
+  color: var(--input-text); border-radius: 8px; padding: 9px 13px;
+  font-size: 13px; resize: vertical; outline: none; font-family: inherit;
 }
 .reply-input:focus { border-color: var(--green); }
 .btn-send {
@@ -317,8 +323,8 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 .admin-login-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .admin-login-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
 .admin-input {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text); border-radius: 8px; padding: 9px 13px;
+  width: 100%; background: var(--input); border: 1px solid var(--border);
+  color: var(--input-text); border-radius: 8px; padding: 9px 13px;
   font-size: 13px; outline: none; margin-bottom: 12px; font-family: inherit;
 }
 .admin-input:focus { border-color: var(--green); }
