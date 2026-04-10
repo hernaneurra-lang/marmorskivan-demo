@@ -1,5 +1,10 @@
 // api-dev/db.mjs — PostgreSQL connection + auto-migration
 import pg from "pg";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const { Pool } = pg;
 
@@ -415,5 +420,179 @@ export async function migrate() {
     );
   }
 
+  // ── Products (stenar) ──
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      base_name TEXT,
+      category TEXT NOT NULL DEFAULT 'okänd',
+      thickness_mm INTEGER DEFAULT 20,
+      price NUMERIC(10,2),
+      edge_price NUMERIC(10,2),
+      discount NUMERIC(5,4) DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'available',
+      featured BOOLEAN DEFAULT false,
+      sort_order INTEGER DEFAULT 9999,
+      search_count INTEGER DEFAULT 0,
+      description TEXT DEFAULT '',
+      pros TEXT DEFAULT '',
+      care TEXT DEFAULT '',
+      supplier TEXT DEFAULT '',
+      supplier_url TEXT DEFAULT '',
+      datasheet_url TEXT DEFAULT '',
+      image TEXT DEFAULT '',
+      campaign_id INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS products_category_idx ON products(category);
+    CREATE INDEX IF NOT EXISTS products_status_idx ON products(status);
+    CREATE INDEX IF NOT EXISTS products_featured_idx ON products(featured);
+  `);
+
+  // ── Catalog accessories (diskhoar, kranar, hällar) ──
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS catalog_accessories (
+      id SERIAL PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('sink','faucet','hob')),
+      title TEXT NOT NULL,
+      brand TEXT DEFAULT '',
+      intro_text TEXT DEFAULT '',
+      specs JSONB DEFAULT '{}',
+      image TEXT DEFAULT '',
+      price NUMERIC(10,2),
+      active BOOLEAN DEFAULT true,
+      sort_order INTEGER DEFAULT 9999,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS accessories_type_idx ON catalog_accessories(type);
+    CREATE INDEX IF NOT EXISTS accessories_active_idx ON catalog_accessories(active);
+  `);
+
+  // ── Campaigns / rabatter ──
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      discount_pct NUMERIC(5,2) DEFAULT 0,
+      applies_to TEXT DEFAULT 'all',
+      valid_from DATE,
+      valid_to DATE,
+      active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // ── Safe column additions ──
+  await db.query(`
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS campaign_id INTEGER;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT false;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 9999;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS search_count INTEGER DEFAULT 0;
+  `);
+
+  await seedProducts(db);
+  await seedAccessories(db);
+
   console.log("✅ DB migrated");
+}
+
+async function seedProducts(db) {
+  // Check if already seeded
+  const { rows } = await db.query("SELECT COUNT(*) AS n FROM products");
+  if (parseInt(rows[0].n) > 0) return; // already seeded
+
+  const dataPath = path.join(__dirname, "../public/data/materialsInfo.json");
+  if (!fs.existsSync(dataPath)) {
+    console.warn("⚠️ materialsInfo.json not found, skipping product seed");
+    return;
+  }
+
+  const raw = JSON.parse(fs.readFileSync(dataPath, "utf8"));
+  const entries = Object.entries(raw); // [key, material]
+  let inserted = 0;
+
+  for (const [key, m] of entries) {
+    // key is e.g. "adamina__20" — use as unique slug
+    const discount = m.discount != null ? parseFloat(m.discount) : 0;
+    await db.query(
+      `INSERT INTO products
+        (slug, name, base_name, category, thickness_mm, price, edge_price,
+         discount, status, description, pros, care, supplier, supplier_url,
+         datasheet_url, image, sort_order, featured)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       ON CONFLICT (slug) DO NOTHING`,
+      [
+        key,
+        m.name || key,
+        m.baseName || m.slug || key,
+        m.category || "okänd",
+        m.thicknessMm || 20,
+        m.price || null,
+        m.edgePrice || null,
+        discount,
+        m.status || "available",
+        m.description || "",
+        m.pros || "",
+        m.care || "",
+        m.supplier || "",
+        m.supplierUrl || "",
+        m.datasheetUrl || "",
+        m.image || "",
+        9999,
+        false,
+      ]
+    );
+    inserted++;
+  }
+  console.log(`✅ Seeded ${inserted} products`);
+}
+
+async function seedAccessories(db) {
+  const { rows } = await db.query("SELECT COUNT(*) AS n FROM catalog_accessories");
+  if (parseInt(rows[0].n) > 0) return;
+
+  const types = [
+    { type: "sink",   file: "../src/data/sinks.json" },
+    { type: "faucet", file: "../src/data/faucets.json" },
+    { type: "hob",    file: "../src/data/hobs.json" },
+  ];
+
+  let total = 0;
+  for (const { type, file } of types) {
+    const filePath = path.join(__dirname, file);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`⚠️ ${file} not found, skipping`);
+      continue;
+    }
+    const items = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    for (const item of items) {
+      if (item.id === "none") continue; // skip placeholder
+      const slug = `${type}-${item.id || item.name?.toLowerCase().replace(/\s+/g, "-")}`;
+      await db.query(
+        `INSERT INTO catalog_accessories
+          (slug, type, title, brand, image, price, active, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (slug) DO NOTHING`,
+        [
+          slug,
+          type,
+          item.name || "",
+          item.brand || "",
+          item.img || "",
+          item.price || null,
+          true,
+          9999,
+        ]
+      );
+      total++;
+    }
+  }
+  console.log(`✅ Seeded ${total} accessories`);
 }

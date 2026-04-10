@@ -1465,6 +1465,279 @@ app.get("/api/admin/export/:type", adminAuth, async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════
+// PRODUCTS (stenar) — CRUD
+// ════════════════════════════════════════
+
+// GET /api/admin/products — list with filters + sorting
+app.get("/api/admin/products", adminAuth, async (req, res) => {
+  try {
+    const {
+      category, status, search, featured,
+      sort = "smart", // smart | sort_order | search_count | name | price
+      limit = 100, offset = 0,
+    } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (category) { params.push(category); conditions.push(`category = $${params.length}`); }
+    if (status)   { params.push(status);   conditions.push(`status = $${params.length}`); }
+    if (featured === "true") conditions.push("featured = true");
+    if (search) {
+      params.push(`%${search.toLowerCase()}%`);
+      conditions.push(`(LOWER(name) LIKE $${params.length} OR LOWER(base_name) LIKE $${params.length})`);
+    }
+
+    const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
+
+    // Smart sort: featured first → has price → search_count → sort_order → name
+    const orderMap = {
+      smart: "featured DESC, (price IS NOT NULL) DESC, search_count DESC, sort_order ASC, name ASC",
+      sort_order: "sort_order ASC, name ASC",
+      search_count: "search_count DESC, name ASC",
+      name: "name ASC",
+      price: "price ASC NULLS LAST",
+    };
+    const orderBy = orderMap[sort] || orderMap.smart;
+
+    params.push(parseInt(limit));
+    params.push(parseInt(offset));
+
+    const { rows } = await query(
+      `SELECT *, COUNT(*) OVER() AS total_count
+       FROM products ${where}
+       ORDER BY ${orderBy}
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    const total = rows[0]?.total_count ? parseInt(rows[0].total_count) : 0;
+    res.json({ products: rows, total });
+  } catch (e) {
+    console.error("[products] list:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/admin/products/categories — distinct categories
+app.get("/api/admin/products/categories", adminAuth, async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT category, COUNT(*) AS n FROM products GROUP BY category ORDER BY n DESC`
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/admin/products/:id
+app.get("/api/admin/products/:id", adminAuth, async (req, res) => {
+  try {
+    const { rows } = await query("SELECT * FROM products WHERE id = $1", [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: "not found" });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/admin/products — create
+app.post("/api/admin/products", adminAuth, async (req, res) => {
+  try {
+    const {
+      slug, name, base_name, category, thickness_mm, price, edge_price,
+      discount, status, description, pros, care, supplier, supplier_url,
+      datasheet_url, image, featured, sort_order, campaign_id,
+    } = req.body;
+    const { rows } = await query(
+      `INSERT INTO products
+        (slug, name, base_name, category, thickness_mm, price, edge_price,
+         discount, status, description, pros, care, supplier, supplier_url,
+         datasheet_url, image, featured, sort_order, campaign_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+       RETURNING *`,
+      [slug, name, base_name || name, category || "okänd",
+       thickness_mm || 20, price || null, edge_price || null,
+       discount || 0, status || "available",
+       description || "", pros || "", care || "",
+       supplier || "", supplier_url || "", datasheet_url || "",
+       image || "", featured || false, sort_order || 9999, campaign_id || null]
+    );
+    res.json(rows[0]);
+  } catch (e) {
+    console.error("[products] create:", e.message);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// PATCH /api/admin/products/:id — partial update
+app.patch("/api/admin/products/:id", adminAuth, async (req, res) => {
+  try {
+    const allowed = [
+      "name","base_name","category","thickness_mm","price","edge_price",
+      "discount","status","description","pros","care","supplier","supplier_url",
+      "datasheet_url","image","featured","sort_order","campaign_id",
+    ];
+    const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+    if (!fields.length) return res.status(400).json({ error: "nothing to update" });
+
+    const sets = fields.map((f, i) => `${f} = $${i + 1}`);
+    sets.push(`updated_at = NOW()`);
+    const vals = fields.map(f => req.body[f]);
+    vals.push(req.params.id);
+
+    const { rows } = await query(
+      `UPDATE products SET ${sets.join(", ")} WHERE id = $${vals.length} RETURNING *`,
+      vals
+    );
+    if (!rows.length) return res.status(404).json({ error: "not found" });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /api/admin/products/:id
+app.delete("/api/admin/products/:id", adminAuth, async (req, res) => {
+  try {
+    await query("DELETE FROM products WHERE id = $1", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/admin/products/:id/increment-search — track searches
+app.post("/api/admin/products/:id/increment-search", adminAuth, async (req, res) => {
+  try {
+    await query("UPDATE products SET search_count = search_count + 1 WHERE id = $1", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════
+// ACCESSORIES — CRUD
+// ════════════════════════════════════════
+
+app.get("/api/admin/accessories", adminAuth, async (req, res) => {
+  try {
+    const { type, active } = req.query;
+    const conditions = [];
+    const params = [];
+    if (type)   { params.push(type); conditions.push(`type = $${params.length}`); }
+    if (active !== undefined) { params.push(active === "true"); conditions.push(`active = $${params.length}`); }
+    const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
+    const { rows } = await query(`SELECT * FROM catalog_accessories ${where} ORDER BY sort_order ASC, title ASC`, params);
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/admin/accessories", adminAuth, async (req, res) => {
+  try {
+    const { slug, type, title, brand, image, price, active, sort_order, intro_text, specs } = req.body;
+    const { rows } = await query(
+      `INSERT INTO catalog_accessories
+        (slug, type, title, brand, image, price, active, sort_order, intro_text, specs)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [slug, type, title, brand || "", image || "", price || null,
+       active !== false, sort_order || 9999, intro_text || "", JSON.stringify(specs || {})]
+    );
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch("/api/admin/accessories/:id", adminAuth, async (req, res) => {
+  try {
+    const allowed = ["title","brand","image","price","active","sort_order","intro_text","specs"];
+    const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+    if (!fields.length) return res.status(400).json({ error: "nothing to update" });
+    const sets = fields.map((f, i) => `${f} = $${i + 1}`);
+    sets.push("updated_at = NOW()");
+    const vals = [...fields.map(f => f === "specs" ? JSON.stringify(req.body[f]) : req.body[f]), req.params.id];
+    const { rows } = await query(
+      `UPDATE catalog_accessories SET ${sets.join(", ")} WHERE id = $${vals.length} RETURNING *`,
+      vals
+    );
+    if (!rows.length) return res.status(404).json({ error: "not found" });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/accessories/:id", adminAuth, async (req, res) => {
+  try {
+    await query("DELETE FROM catalog_accessories WHERE id = $1", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════
+// CAMPAIGNS — CRUD
+// ════════════════════════════════════════
+
+app.get("/api/admin/campaigns", adminAuth, async (req, res) => {
+  try {
+    const { rows } = await query("SELECT * FROM campaigns ORDER BY created_at DESC");
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/admin/campaigns", adminAuth, async (req, res) => {
+  try {
+    const { name, description, discount_pct, applies_to, valid_from, valid_to, active } = req.body;
+    const { rows } = await query(
+      `INSERT INTO campaigns (name, description, discount_pct, applies_to, valid_from, valid_to, active)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [name, description || "", discount_pct || 0, applies_to || "all",
+       valid_from || null, valid_to || null, active !== false]
+    );
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch("/api/admin/campaigns/:id", adminAuth, async (req, res) => {
+  try {
+    const allowed = ["name","description","discount_pct","applies_to","valid_from","valid_to","active"];
+    const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+    if (!fields.length) return res.status(400).json({ error: "nothing to update" });
+    const sets = fields.map((f, i) => `${f} = $${i + 1}`);
+    sets.push("updated_at = NOW()");
+    const vals = [...fields.map(f => req.body[f]), req.params.id];
+    const { rows } = await query(
+      `UPDATE campaigns SET ${sets.join(", ")} WHERE id = $${vals.length} RETURNING *`,
+      vals
+    );
+    if (!rows.length) return res.status(404).json({ error: "not found" });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/campaigns/:id", adminAuth, async (req, res) => {
+  try {
+    await query("DELETE FROM campaigns WHERE id = $1", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Start ──
 async function start() {
   if (HAS_DB) {
