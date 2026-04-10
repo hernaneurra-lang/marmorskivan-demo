@@ -14,7 +14,7 @@ const STATUS_COLORS = { open: "var(--green)", resolved: "var(--muted)" };
 const PRIORITY_LABELS = { normal: "Normal", high: "Hög", urgent: "Brådskande" };
 const PRIORITY_COLORS = { normal: "var(--muted)", high: "#f59e0b", urgent: "#ef4444" };
 
-function SessionList({ sessions, selectedId, onSelect }) {
+function SessionList({ sessions, selectedId, onSelect, selectedIds, onToggle, onToggleAll }) {
   if (!sessions.length) {
     return (
       <div className="empty-state">
@@ -23,14 +23,47 @@ function SessionList({ sessions, selectedId, onSelect }) {
       </div>
     );
   }
+  const allSelected = sessions.length > 0 && sessions.every((s) => selectedIds.has(s.id));
   return (
     <div className="session-list">
+      {/* Select-all row */}
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
+          borderBottom: "1px solid var(--border)", background: "var(--surface2)",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={onToggleAll}
+          style={{ cursor: "pointer", width: 15, height: 15, accentColor: "var(--green)" }}
+          title="Markera alla"
+        />
+        <span style={{ fontSize: 11, color: "var(--muted)", userSelect: "none" }}>
+          {selectedIds.size > 0 ? `${selectedIds.size} valda` : "Markera alla"}
+        </span>
+      </div>
+
       {sessions.map((s) => (
         <div
           key={s.id}
-          className={`session-item${selectedId === s.id ? " selected" : ""}`}
+          className={`session-item${selectedId === s.id ? " selected" : ""}${selectedIds.has(s.id) ? " bulk-selected" : ""}`}
           onClick={() => onSelect(s)}
+          style={{ position: "relative" }}
         >
+          {/* Checkbox — stop click propagation so selecting doesn't open the chat */}
+          <div
+            onClick={(e) => { e.stopPropagation(); onToggle(s.id); }}
+            style={{ flexShrink: 0, display: "flex", alignItems: "center", paddingRight: 4, cursor: "pointer" }}
+          >
+            <input
+              type="checkbox"
+              checked={selectedIds.has(s.id)}
+              onChange={() => {}}
+              style={{ cursor: "pointer", width: 14, height: 14, accentColor: "var(--green)", pointerEvents: "none" }}
+            />
+          </div>
           <div className="session-avatar">
             {s.has_contact ? "📞" : "💬"}
           </div>
@@ -57,7 +90,7 @@ function SessionList({ sessions, selectedId, onSelect }) {
 
 const PRESET_TAGS = ["Lead", "Hög prio", "Följ upp", "Offert", "Reklamation", "Nöjd kund"];
 
-function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, kbItems = [] }) {
+function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, kbItems = [], agents = [], currentAgent = null }) {
   const [data, setData] = useState(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
@@ -68,6 +101,7 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
   const [faqSearch, setFaqSearch] = useState("");
   const [customerTyping, setCustomerTyping] = useState(false);
   const [tags, setTags] = useState([]);
+  const [showAgentPicker, setShowAgentPicker] = useState(false);
   const messagesEndRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -155,8 +189,13 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
     }
   };
 
-  const handover = async () => {
-    await fetch(`${apiBase}/api/admin/sessions/${session.id}/handover`, { method: "POST", headers });
+  const handover = async (agent) => {
+    await fetch(`${apiBase}/api/admin/sessions/${session.id}/handover`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_name: agent?.name || null, agent_avatar_url: agent?.avatar_url || null }),
+    });
+    setShowAgentPicker(false);
     load();
     onUpdated?.();
   };
@@ -217,21 +256,94 @@ function SessionDetail({ session, headers, apiBase, onUpdated, cannedResponses, 
           {Object.entries(PRIORITY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
 
-        {/* Handover button */}
-        {sessionInfo.mode !== "agent" ? (
-          <button
-            className="btn-refresh"
-            onClick={handover}
-            style={{ flexShrink: 0, fontSize: 12, color: "#06b6d4", borderColor: "#06b6d4" }}
-            title="Ta över chatten som human agent"
-          >
-            🤝 Ta över
-          </button>
-        ) : (
-          <span style={{ fontSize: 11, background: "#06b6d420", color: "#06b6d4", padding: "3px 8px", borderRadius: 6, fontWeight: 600 }}>
-            🧑‍💼 Human agent
-          </span>
-        )}
+        {/* Handover / agent picker */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          {sessionInfo.mode !== "agent" ? (
+            <button
+              className="btn-refresh"
+              onClick={() => currentAgent ? handover(currentAgent) : setShowAgentPicker((v) => !v)}
+              style={{ fontSize: 12, color: "#06b6d4", borderColor: "#06b6d4", display: "flex", alignItems: "center", gap: 6 }}
+              title={currentAgent ? `Ta över som ${currentAgent.name}` : "Ta över chatten som human agent"}
+            >
+              {currentAgent?.avatar_url
+                ? <img src={currentAgent.avatar_url} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+                : "🤝"
+              }
+              {currentAgent ? `Ta över som ${currentAgent.name}` : "🤝 Ta över"}
+            </button>
+          ) : (
+            <button
+              className="btn-refresh"
+              onClick={() => setShowAgentPicker((v) => !v)}
+              style={{ fontSize: 12, color: "#06b6d4", borderColor: "#06b6d4", display: "flex", alignItems: "center", gap: 6 }}
+              title="Lämna över till annan agent"
+            >
+              {sessionInfo.agent_avatar_url
+                ? <img src={sessionInfo.agent_avatar_url} alt="" style={{ width: 18, height: 18, borderRadius: "50%", objectFit: "cover" }} />
+                : "🧑‍💼"
+              }
+              {sessionInfo.agent_name || "Human agent"} ↓
+            </button>
+          )}
+
+          {showAgentPicker && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 100,
+              background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)", minWidth: 220, padding: 8,
+            }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", padding: "4px 8px 8px", fontWeight: 600, textTransform: "uppercase" }}>
+                Lämna över till
+              </div>
+              {agents.length === 0 && (
+                <div style={{ padding: "8px 10px", fontSize: 12, color: "var(--muted)" }}>
+                  Inga agenter definierade.<br />Lägg till i Inställningar → Agenter.
+                </div>
+              )}
+              {agents.map((agent) => (
+                <button
+                  key={agent.id}
+                  onClick={() => handover(agent)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10, width: "100%",
+                    padding: "8px 10px", border: "none", borderRadius: 7, cursor: "pointer",
+                    background: sessionInfo.agent_name === agent.name ? "rgba(5,150,105,0.08)" : "none",
+                    textAlign: "left",
+                  }}
+                >
+                  {agent.avatar_url
+                    ? <img src={agent.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                    : <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>👤</div>
+                  }
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{agent.name || "Namnlös agent"}</span>
+                  {sessionInfo.agent_name === agent.name && (
+                    <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--green)" }}>✓</span>
+                  )}
+                </button>
+              ))}
+              {agents.length > 0 && (
+                <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
+              )}
+              <button
+                onClick={() => handover(null)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: "8px 10px", border: "none", borderRadius: 7, cursor: "pointer",
+                  background: "none", textAlign: "left",
+                }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🤝</div>
+                <span style={{ fontSize: 13, color: "var(--text)" }}>Ta över (utan profil)</span>
+              </button>
+              <button
+                onClick={() => setShowAgentPicker(false)}
+                style={{ display: "block", width: "100%", padding: "6px 10px", border: "none", borderRadius: 7, cursor: "pointer", background: "none", textAlign: "center", fontSize: 12, color: "var(--muted)" }}
+              >
+                Avbryt
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* End session button */}
         {sessionInfo.status !== "resolved" ? (
@@ -465,7 +577,25 @@ export default function SessionsView({ headers, apiBase }) {
   const [cannedResponses, setCannedResponses] = useState([]);
   const [kbItems, setKbItems] = useState([]);
   const [cleanDays, setCleanDays] = useState(30);
+  const [agents, setAgents] = useState([]);
+  const [currentAgent, setCurrentAgent] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("ms_current_agent") || "null"); } catch { return null; }
+  });
   const prevSessionIds = useRef(new Set());
+
+  // ── Bulk selection ──────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  const toggleSelect  = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleAll = () => setSelectedIds((prev) =>
+    prev.size === sessions.length ? new Set() : new Set(sessions.map((s) => s.id))
+  );
+  const clearSelection = () => setSelectedIds(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -504,9 +634,19 @@ export default function SessionsView({ headers, apiBase }) {
     } catch {}
   }, [apiBase, JSON.stringify(headers)]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadAgents = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings`, { headers });
+      const data = await res.json();
+      const raw = data.agents_list || "[]";
+      try { setAgents(JSON.parse(raw)); } catch { setAgents([]); }
+    } catch {}
+  }, [apiBase, JSON.stringify(headers)]);
+
+  useEffect(() => { load(); clearSelection(); }, [load]);
   useEffect(() => { loadCanned(); }, [loadCanned]);
   useEffect(() => { loadKb(); }, [loadKb]);
+  useEffect(() => { loadAgents(); }, [loadAgents]);
 
   // Auto-poll sessions every 15s so new chats appear without manual refresh
   useEffect(() => {
@@ -514,17 +654,78 @@ export default function SessionsView({ headers, apiBase }) {
     return () => clearInterval(t);
   }, [load]);
 
+  const bulkResolve = async () => {
+    if (!selectedIds.size || bulkLoading) return;
+    setBulkLoading(true);
+    try {
+      for (const id of selectedIds) {
+        await fetch(`${apiBase}/api/admin/sessions/${id}`, {
+          method: "PATCH", headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "resolved" }),
+        });
+      }
+      clearSelection();
+      load();
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!selectedIds.size || bulkLoading) return;
+    if (!window.confirm(`Radera ${selectedIds.size} chattar permanent? Det går inte att ångra.`)) return;
+    setBulkLoading(true);
+    try {
+      for (const id of selectedIds) {
+        await fetch(`${apiBase}/api/admin/sessions/${id}`, { method: "DELETE", headers });
+      }
+      clearSelection();
+      if (selectedIds.has(selected?.id)) setSelected(null);
+      load();
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const FILTERS = [
     { value: "all",      label: "Alla" },
     { value: "open",     label: "Öppna" },
     { value: "leads",    label: "Leads" },
     { value: "resolved", label: "Avslutade" },
+    { value: "archive",  label: "📦 Arkiv (20 senaste)" },
   ];
 
   return (
     <>
       <div className="admin-topbar">
         <h1>💬 Chattar</h1>
+
+        {/* "Du är" — current agent identity */}
+        {agents.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px" }}>
+            {currentAgent?.avatar_url
+              ? <img src={currentAgent.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
+              : <span style={{ fontSize: 16 }}>👤</span>
+            }
+            <span style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>Du är:</span>
+            <select
+              className="admin-select"
+              style={{ fontSize: 12, padding: "0 4px", marginBottom: 0, border: "none", background: "transparent", fontWeight: 600, color: "var(--text)" }}
+              value={currentAgent?.id || ""}
+              onChange={(e) => {
+                const agent = agents.find((a) => a.id === e.target.value) || null;
+                setCurrentAgent(agent);
+                localStorage.setItem("ms_current_agent", JSON.stringify(agent));
+              }}
+            >
+              <option value="">– Välj agent –</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>{a.name || "Namnlös"}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, alignItems: "center", flex: 1, maxWidth: 600 }}>
           {/* Search */}
           <input
@@ -572,12 +773,59 @@ export default function SessionsView({ headers, apiBase }) {
       </div>
 
       <div className="chat-split" style={{ height: "calc(100vh - 57px)" }}>
-        <div className="chat-list-panel">
-          {loading ? (
-            <div style={{ padding: 24, color: "var(--muted)" }}>Laddar…</div>
-          ) : (
-            <SessionList sessions={sessions} selectedId={selected?.id} onSelect={setSelected} />
+        <div className="chat-list-panel" style={{ display: "flex", flexDirection: "column" }}>
+          {/* Bulk action toolbar */}
+          {selectedIds.size > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+              background: "rgba(5,150,105,0.08)", borderBottom: "1px solid var(--green)",
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--green)" }}>
+                {selectedIds.size} valda
+              </span>
+              <button
+                onClick={clearSelection}
+                style={{ fontSize: 11, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
+              >
+                Avmarkera
+              </button>
+              <div style={{ flex: 1 }} />
+              <button
+                className="admin-btn-secondary"
+                style={{ fontSize: 11, padding: "3px 10px" }}
+                onClick={bulkResolve}
+                disabled={bulkLoading}
+                title="Markera valda chattar som avslutade"
+              >
+                {bulkLoading ? "…" : "✓ Avsluta"}
+              </button>
+              <button
+                className="btn-danger"
+                style={{ fontSize: 11, padding: "3px 10px" }}
+                onClick={bulkDelete}
+                disabled={bulkLoading}
+                title="Radera valda chattar permanent"
+              >
+                {bulkLoading ? "…" : "🗑 Radera"}
+              </button>
+            </div>
           )}
+
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {loading ? (
+              <div style={{ padding: 24, color: "var(--muted)" }}>Laddar…</div>
+            ) : (
+              <SessionList
+                sessions={sessions}
+                selectedId={selected?.id}
+                onSelect={setSelected}
+                selectedIds={selectedIds}
+                onToggle={toggleSelect}
+                onToggleAll={toggleAll}
+              />
+            )}
+          </div>
         </div>
         <SessionDetail
           session={selected}
@@ -586,6 +834,8 @@ export default function SessionsView({ headers, apiBase }) {
           onUpdated={load}
           cannedResponses={cannedResponses}
           kbItems={kbItems}
+          agents={agents}
+          currentAgent={currentAgent}
         />
       </div>
     </>

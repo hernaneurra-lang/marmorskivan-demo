@@ -207,6 +207,7 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 }
 .session-item:hover { background: var(--surface2); }
 .session-item.selected { background: var(--surface2); border-left: 3px solid var(--green); }
+.session-item.bulk-selected { background: rgba(5,150,105,0.07); }
 .session-avatar { width: 34px; height: 34px; border-radius: 50%; background: rgba(5,150,105,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
 .session-info { flex: 1; min-width: 0; }
 .session-meta { font-size: 11px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
