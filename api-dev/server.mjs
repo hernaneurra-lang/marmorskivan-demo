@@ -1480,7 +1480,8 @@ app.get("/api/admin/products", adminAuth, async (req, res) => {
   try {
     const {
       category, status, search, featured,
-      sort = "smart", // smart | sort_order | search_count | name | price
+      has_price, has_image,
+      sort = "smart",
       limit = 100, offset = 0,
     } = req.query;
 
@@ -1494,6 +1495,10 @@ app.get("/api/admin/products", adminAuth, async (req, res) => {
       params.push(`%${search.toLowerCase()}%`);
       conditions.push(`(LOWER(name) LIKE $${params.length} OR LOWER(base_name) LIKE $${params.length})`);
     }
+    if (has_price === "yes") conditions.push("price IS NOT NULL");
+    if (has_price === "no")  conditions.push("price IS NULL");
+    if (has_image === "yes") conditions.push("image IS NOT NULL AND image != ''");
+    if (has_image === "no")  conditions.push("(image IS NULL OR image = '')");
 
     const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
 

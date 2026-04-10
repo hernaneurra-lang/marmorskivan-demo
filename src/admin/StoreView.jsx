@@ -92,7 +92,7 @@ function StonesTab({ headers, apiBase }) {
   const [total, setTotal]         = useState(0);
   const [loading, setLoading]     = useState(false);
   const [categories, setCategories] = useState([]);
-  const [filters, setFilters]     = useState({ category: "", status: "", search: "", sort: "smart" });
+  const [filters, setFilters]     = useState({ category: "", status: "", search: "", sort: "smart", has_price: "", has_image: "" });
   const [page, setPage]           = useState(0);
   const [editing, setEditing]     = useState(null); // product object or null
   const [adding, setAdding]       = useState(false);
@@ -214,6 +214,26 @@ function StonesTab({ headers, apiBase }) {
           {SORT_OPTIONS.map(o => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
+        </select>
+        <select
+          className="admin-input"
+          style={{ width: 150, marginBottom: 0 }}
+          value={filters.has_price}
+          onChange={e => applyFilters({ ...filters, has_price: e.target.value })}
+        >
+          <option value="">Alla priser</option>
+          <option value="yes">Har pris</option>
+          <option value="no">Saknar pris</option>
+        </select>
+        <select
+          className="admin-input"
+          style={{ width: 150, marginBottom: 0 }}
+          value={filters.has_image}
+          onChange={e => applyFilters({ ...filters, has_image: e.target.value })}
+        >
+          <option value="">Alla bilder</option>
+          <option value="yes">Har bild</option>
+          <option value="no">Saknar bild</option>
         </select>
         <button className="btn-primary" onClick={() => setAdding(true)}>+ Lägg till sten</button>
       </div>
