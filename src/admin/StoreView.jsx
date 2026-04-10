@@ -381,14 +381,16 @@ function ProductModal({ product, onSave, onClose }) {
     sort_order:   product?.sort_order   || 9999,
   });
 
-  function Field({ label, field, type = "text", multiline }) {
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--text)", opacity: 0.75, display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" };
+
+  function Field({ label, field, type = "text", multiline, fullWidth }) {
     return (
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>{label}</label>
+      <div style={{ marginBottom: 14, gridColumn: fullWidth ? "1 / -1" : undefined }}>
+        <label style={labelStyle}>{label}</label>
         {multiline ? (
           <textarea
             className="reply-input"
-            style={{ minHeight: 70, marginBottom: 0 }}
+            style={{ minHeight: 80, marginBottom: 0, width: "100%", boxSizing: "border-box" }}
             value={form[field]}
             onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
           />
@@ -412,7 +414,7 @@ function ProductModal({ product, onSave, onClose }) {
     }}>
       <div style={{
         background: "var(--card)", borderRadius: 14, padding: 28,
-        width: "min(96vw, 640px)", maxHeight: "90vh", overflowY: "auto",
+        width: "min(96vw, 780px)", maxHeight: "92vh", overflowY: "auto",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <h3 style={{ margin: 0, color: "var(--text)" }}>
@@ -422,11 +424,11 @@ function ProductModal({ product, onSave, onClose }) {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-          {isNew && <Field label="Slug (unikt ID)" field="slug" />}
+          {isNew && <Field label="Slug (unikt ID)" field="slug" fullWidth />}
           <Field label="Namn" field="name" />
           <Field label="Basnamn" field="base_name" />
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Kategori</label>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Kategori</label>
             <input
               className="admin-input" style={{ marginBottom: 0 }}
               value={form.category}
@@ -442,8 +444,8 @@ function ProductModal({ product, onSave, onClose }) {
           <Field label="Tjocklek (mm)" field="thickness_mm" type="number" />
           <Field label="Pris (kr/m²)" field="price" type="number" />
           <Field label="Kantpris (kr/lm)" field="edge_price" type="number" />
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Status</label>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Status</label>
             <select
               className="admin-input" style={{ marginBottom: 0 }}
               value={form.status}
@@ -455,13 +457,12 @@ function ProductModal({ product, onSave, onClose }) {
             </select>
           </div>
           <Field label="Sorteringsordning" field="sort_order" type="number" />
+          <Field label="Bild-URL" field="image" fullWidth />
+          <Field label="Beskrivning" field="description" multiline fullWidth />
+          <Field label="Fördelar" field="pros" multiline fullWidth />
+          <Field label="Skötsel" field="care" multiline fullWidth />
+          <Field label="Leverantör" field="supplier" fullWidth />
         </div>
-
-        <Field label="Bild-URL" field="image" />
-        <Field label="Beskrivning" field="description" multiline />
-        <Field label="Fördelar" field="pros" multiline />
-        <Field label="Skötsel" field="care" multiline />
-        <Field label="Leverantör" field="supplier" />
 
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
           <input
