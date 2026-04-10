@@ -522,7 +522,6 @@ function ProductModal({ product, onSave, onClose }) {
             <ImageUploader
               value={form.image}
               onChange={v => setForm(f => ({ ...f, image: v }))}
-              headers={headers} apiBase={apiBase}
             />
           </div>
           <Field label="Beskrivning" field="description" multiline fullWidth />
@@ -775,7 +774,6 @@ function AccessoryModal({ item, type, onSave, onClose }) {
         <ImageUploader
           value={form.image}
           onChange={v => setForm(f => ({ ...f, image: v }))}
-          headers={headers} apiBase={apiBase}
         />
         <Field label="Pris (kr)" field="price" type="number" />
         <Field label="Sorteringsordning" field="sort_order" type="number" />
