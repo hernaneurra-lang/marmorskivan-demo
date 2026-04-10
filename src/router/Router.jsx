@@ -12,6 +12,9 @@ import AdminPage from "../admin/AdminPage.jsx";
 // Sketch (lazy)
 const SketchPage = lazy(() => import("../pages/SketchPage.jsx"));
 
+// Individual material product page (lazy)
+const MaterialProductPage = lazy(() => import("../pages/MaterialProductPage.jsx"));
+
 // Material (lazy)
 const Marmor = lazy(() => import("../pages/material/Marmor.jsx"));
 const Granit = lazy(() => import("../pages/material/Granit.jsx"));
@@ -91,6 +94,9 @@ export default function AppRoutes() {
         <Route path="/material/travertin" element={<Travertin />} />
         <Route path="/material/semiprecious" element={<SemiPrecious />} />
         <Route path="/material/atervunnetglas" element={<AtervunnetGlas />} />
+
+        {/* Individual material product pages — must be before catch-all */}
+        <Route path="/material/produkt/:slug" element={<MaterialProductPage />} />
 
         {/* 2D sketch */}
         <Route path="/ritning" element={<SketchPage />} />

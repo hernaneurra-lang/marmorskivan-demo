@@ -137,21 +137,33 @@ for (const fp of files) {
   if (p) allPaths.add(p);
 }
 
+// ---- Läs produkter från materialsInfo.json ----
+const materialsInfoPath = path.join(projectRoot, "public/data/materialsInfo.json");
+let productPaths = [];
+if (fs.existsSync(materialsInfoPath)) {
+  const mData = JSON.parse(fs.readFileSync(materialsInfoPath, "utf8"));
+  productPaths = Object.keys(mData).map((slug) => `/material/produkt/${slug}`);
+  console.log(`ℹ️ Laddade ${productPaths.length} produkter från materialsInfo.json`);
+} else {
+  console.warn("⚠️ Hittade inte public/data/materialsInfo.json — inga produktsidor i sitemap");
+}
+
 // ---- Klassificera ----
 const isMaterial = (p) => p === "/material" || p.startsWith("/material/");
 const materialPaths = [...allPaths].filter(isMaterial);
 const seoPaths = [...allPaths].filter((p) => !isMaterial(p));
 
 // ---- Skriv sitemap-filer ----
-const outSeo = path.join(distPath, "sitemap-seo.xml");
-const outMat = path.join(distPath, "sitemap-material.xml");
-const outIndex = path.join(distPath, "sitemap.xml");
+const outSeo      = path.join(distPath, "sitemap-seo.xml");
+const outMat      = path.join(distPath, "sitemap-material.xml");
+const outProducts = path.join(distPath, "sitemap-products.xml");
+const outIndex    = path.join(distPath, "sitemap.xml");
 
 fs.writeFileSync(
   outSeo,
   buildUrlset(seoPaths, {
-    priorityFn: (p) => (p === "/" ? "1.0" : "0.9"),
-    changefreqFn: (p) => (p === "/" ? "daily" : "weekly"),
+    priorityFn:    (p) => (p === "/" ? "1.0" : "0.9"),
+    changefreqFn:  (p) => (p === "/" ? "daily" : "weekly"),
   }),
   "utf8"
 );
@@ -159,7 +171,16 @@ fs.writeFileSync(
 fs.writeFileSync(
   outMat,
   buildUrlset(materialPaths, {
-    priorityFn: () => "0.7",
+    priorityFn:   () => "0.7",
+    changefreqFn: () => "monthly",
+  }),
+  "utf8"
+);
+
+fs.writeFileSync(
+  outProducts,
+  buildUrlset(productPaths, {
+    priorityFn:   () => "0.6",
     changefreqFn: () => "monthly",
   }),
   "utf8"
@@ -167,10 +188,11 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   outIndex,
-  buildSitemapIndex(["/sitemap-seo.xml", "/sitemap-material.xml"]),
+  buildSitemapIndex(["/sitemap-seo.xml", "/sitemap-material.xml", "/sitemap-products.xml"]),
   "utf8"
 );
 
 console.log(`✅ sitemap index skapad: ${outIndex}`);
 console.log(`✅ sitemap-seo.xml: ${seoPaths.length} URL:er`);
 console.log(`✅ sitemap-material.xml: ${materialPaths.length} URL:er`);
+console.log(`✅ sitemap-products.xml: ${productPaths.length} URL:er`);
