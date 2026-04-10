@@ -476,7 +476,16 @@ function ProductModal({ product, onSave, onClose }) {
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
           <button className="admin-btn-secondary" onClick={onClose}>Avbryt</button>
-          <button className="btn-primary" onClick={() => onSave(form)}>
+          <button className="btn-primary" onClick={() => {
+            const numericFields = ["price", "edge_price", "discount", "thickness_mm", "sort_order"];
+            const cleaned = { ...form };
+            for (const f of numericFields) {
+              if (cleaned[f] === "" || cleaned[f] === null || cleaned[f] === undefined) {
+                cleaned[f] = null;
+              }
+            }
+            onSave(cleaned);
+          }}>
             {isNew ? "Skapa" : "Spara ändringar"}
           </button>
         </div>

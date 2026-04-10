@@ -1580,12 +1580,17 @@ app.patch("/api/admin/products/:id", adminAuth, async (req, res) => {
       "discount","status","description","pros","care","supplier","supplier_url",
       "datasheet_url","image","featured","sort_order","campaign_id",
     ];
+    const numericFields = new Set(["thickness_mm","price","edge_price","discount","sort_order","campaign_id"]);
     const fields = Object.keys(req.body).filter(k => allowed.includes(k));
     if (!fields.length) return res.status(400).json({ error: "nothing to update" });
 
     const sets = fields.map((f, i) => `${f} = $${i + 1}`);
     sets.push(`updated_at = NOW()`);
-    const vals = fields.map(f => req.body[f]);
+    const vals = fields.map(f => {
+      const v = req.body[f];
+      if (numericFields.has(f) && (v === "" || v === undefined)) return null;
+      return v;
+    });
     vals.push(req.params.id);
 
     const { rows } = await query(
