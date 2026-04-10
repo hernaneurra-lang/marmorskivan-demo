@@ -7,8 +7,13 @@ import cors from "cors";
 import { OpenAI, toFile } from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
+import fs from "fs";
 import nodemailer from "nodemailer";
 import { query, migrate } from "./db.mjs";
+
+// Ensure uploads dir exists
+const UPLOADS_DIR = path.join(__dirname, "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -79,6 +84,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "20mb" }));
 app.use(express.text({ limit: "16kb", type: "text/plain" }));
+app.use("/uploads", express.static(UPLOADS_DIR));
 
 // ── Simple in-memory rate limiter (per IP, per minute) ──
 const rateLimits = new Map();
@@ -1739,6 +1745,33 @@ app.delete("/api/admin/campaigns/:id", adminAuth, async (req, res) => {
     await query("DELETE FROM campaigns WHERE id = $1", [req.params.id]);
     res.json({ ok: true });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Image upload ──
+// POST /api/admin/upload-image — body: { data: "data:image/...;base64,...", filename: "foo.jpg" }
+app.post("/api/admin/upload-image", adminAuth, async (req, res) => {
+  try {
+    const { data, filename } = req.body;
+    if (!data || !filename) return res.status(400).json({ error: "data and filename required" });
+
+    const matches = data.match(/^data:image\/(\w+);base64,(.+)$/s);
+    if (!matches) return res.status(400).json({ error: "invalid image data" });
+
+    const ext = matches[1].replace("jpeg", "jpg");
+    const base64 = matches[2];
+
+    // Sanitize filename
+    const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.+/g, ".").slice(0, 120);
+    const name = `${Date.now()}_${safe}`;
+    const filePath = path.join(UPLOADS_DIR, name);
+
+    fs.writeFileSync(filePath, Buffer.from(base64, "base64"));
+
+    res.json({ url: `/uploads/${name}` });
+  } catch (e) {
+    console.error("[upload]", e.message);
     res.status(500).json({ error: e.message });
   }
 });

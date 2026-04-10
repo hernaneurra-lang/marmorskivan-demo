@@ -2,6 +2,81 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "./AdminPage.jsx";
 
+// Shared image uploader component
+function ImageUploader({ value, onChange, headers, apiBase }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef();
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const data = ev.target.result; // data:image/...;base64,...
+        const res = await fetch(`${apiBase}/api/admin/upload-image`, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ data, filename: file.name }),
+        });
+        const json = await res.json();
+        if (json.url) onChange(json.url);
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploading(false);
+    }
+  }
+
+  const src = value?.startsWith("http") || value?.startsWith("/") ? value : null;
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", opacity: 0.75, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        Bild
+      </label>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        {/* Preview */}
+        <div style={{
+          width: 96, height: 72, borderRadius: 8, border: "1px solid var(--border)",
+          background: "var(--surface2)", flexShrink: 0, overflow: "hidden",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {src
+            ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={{ fontSize: 24, opacity: 0.3 }}>🖼️</span>
+          }
+        </div>
+        {/* Controls */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+          <input
+            className="admin-input"
+            style={{ marginBottom: 0, fontSize: 12 }}
+            placeholder="URL — t.ex. /materials/Bild.jpg"
+            value={value || ""}
+            onChange={e => onChange(e.target.value)}
+          />
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              style={{ fontSize: 12, padding: "4px 12px", flexShrink: 0 }}
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? "Laddar upp…" : "📁 Ladda upp bild"}
+            </button>
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>jpg/png/webp, max 10 MB</span>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STATUS_LABELS = {
   available: { label: "Aktiv",      color: "#22c55e" },
   paused:    { label: "Pausad",     color: "#f59e0b" },
@@ -290,6 +365,7 @@ function StonesTab({ headers, apiBase }) {
           product={editing}
           onSave={patch => patchProduct(editing.id, patch)}
           onClose={() => setEditing(null)}
+          headers={headers} apiBase={apiBase}
         />
       )}
 
@@ -299,6 +375,7 @@ function StonesTab({ headers, apiBase }) {
           product={null}
           onSave={createProduct}
           onClose={() => setAdding(false)}
+          headers={headers} apiBase={apiBase}
         />
       )}
 
@@ -366,7 +443,7 @@ function toSlug(str) {
     .replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
-function ProductModal({ product, onSave, onClose }) {
+function ProductModal({ product, onSave, onClose, headers, apiBase }) {
   const isNew = !product;
   const [form, setForm] = useState({
     slug:         product?.slug        || "",
@@ -462,7 +539,13 @@ function ProductModal({ product, onSave, onClose }) {
             </select>
           </div>
           <Field label="Sorteringsordning" field="sort_order" type="number" />
-          <Field label="Bild-URL" field="image" fullWidth />
+          <div style={{ gridColumn: "1 / -1" }}>
+            <ImageUploader
+              value={form.image}
+              onChange={v => setForm(f => ({ ...f, image: v }))}
+              headers={headers} apiBase={apiBase}
+            />
+          </div>
           <Field label="Beskrivning" field="description" multiline fullWidth />
           <Field label="Fördelar" field="pros" multiline fullWidth />
           <Field label="Skötsel" field="care" multiline fullWidth />
@@ -651,10 +734,10 @@ function AccessoriesTab({ headers, apiBase }) {
       )}
 
       {editing && (
-        <AccessoryModal item={editing} type={tab} onSave={d => patch(editing.id, d)} onClose={() => setEditing(null)} />
+        <AccessoryModal item={editing} type={tab} onSave={d => patch(editing.id, d)} onClose={() => setEditing(null)} headers={headers} apiBase={apiBase} />
       )}
       {adding && (
-        <AccessoryModal item={null} type={tab} onSave={create} onClose={() => setAdding(false)} />
+        <AccessoryModal item={null} type={tab} onSave={create} onClose={() => setAdding(false)} headers={headers} apiBase={apiBase} />
       )}
       {confirm && (
         <Confirm
@@ -667,7 +750,7 @@ function AccessoriesTab({ headers, apiBase }) {
   );
 }
 
-function AccessoryModal({ item, type, onSave, onClose }) {
+function AccessoryModal({ item, type, onSave, onClose, headers, apiBase }) {
   const isNew = !item;
   const [form, setForm] = useState({
     slug:       item?.slug       || "",
@@ -710,7 +793,11 @@ function AccessoryModal({ item, type, onSave, onClose }) {
         </div>
         <Field label="Namn" field="title" />
         <Field label="Märke / Tillverkare" field="brand" />
-        <Field label="Bild-URL" field="image" />
+        <ImageUploader
+          value={form.image}
+          onChange={v => setForm(f => ({ ...f, image: v }))}
+          headers={headers} apiBase={apiBase}
+        />
         <Field label="Pris (kr)" field="price" type="number" />
         <Field label="Sorteringsordning" field="sort_order" type="number" />
         <div style={{ marginBottom: 12 }}>
