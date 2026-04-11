@@ -2,6 +2,15 @@ Options -MultiViews
 RewriteEngine On
 RewriteBase /
 
+# Never rewrite requests to assets or static files
+RewriteRule ^assets/ - [L]
+RewriteRule ^data/ - [L]
+RewriteRule ^images/ - [L]
+RewriteRule ^products/ - [L]
+RewriteRule ^materials/ - [L]
+RewriteRule ^hero/ - [L]
+RewriteRule ^mountings/ - [L]
+
 # Serve existing files and directories as-is
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
