@@ -558,6 +558,9 @@ async function seedAccessories(db) {
   // Clean up bad rows (empty title from previous bad seed)
   await db.query(`DELETE FROM catalog_accessories WHERE title = '' OR title IS NULL`);
 
+  // Image subfolder per type — matches IMG_BASE_BY_DATASET in OpeningsSection.jsx
+  const IMG_FOLDER = { sink: "sinks", faucet: "faucets", hob: "hobs" };
+
   const types = [
     { type: "sink",   file: "../public/data/catalog/sinks.json" },
     { type: "faucet", file: "../public/data/catalog/faucets.json" },
@@ -583,8 +586,12 @@ async function seedAccessories(db) {
         const m = String(item.specs["Pris från"]).match(/(\d+)/);
         if (m) price = parseInt(m[1]);
       }
-      // image: catalog/hobs have filename, sinks/faucets don't
-      const image = item.image ? `/products/${item.image}` : "";
+      // Build image path matching /products/{type-folder}/{slug}.jpg
+      // Same convention as IMG_BASE_BY_DATASET in OpeningsSection.jsx
+      const folder = IMG_FOLDER[type];
+      const image = item.image
+        ? `/products/${folder}/${item.image}`
+        : `/products/${folder}/${item.slug}.jpg`;
       await db.query(
         `INSERT INTO catalog_accessories
           (slug, type, title, brand, image, price, intro_text, specs, active, sort_order)
