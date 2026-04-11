@@ -574,6 +574,10 @@ function AccessoriesTab({ headers, apiBase }) {
   const [editing, setEditing] = useState(null);
   const [adding, setAdding]   = useState(false);
   const [confirm, setConfirm] = useState(null);
+  const [search, setSearch]   = useState("");
+  const [hasPrice, setHasPrice] = useState("");
+  const [hasImage, setHasImage] = useState("");
+  const [showActive, setShowActive] = useState("");
 
   const load = useCallback(async (t = tab) => {
     setLoading(true);
@@ -586,6 +590,20 @@ function AccessoriesTab({ headers, apiBase }) {
   }, [tab, apiBase, headers]);
 
   useEffect(() => { load(); }, [tab]);
+
+  const filtered = items.filter(item => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!item.title?.toLowerCase().includes(q) && !item.brand?.toLowerCase().includes(q)) return false;
+    }
+    if (hasPrice === "yes" && !item.price) return false;
+    if (hasPrice === "no"  &&  item.price) return false;
+    if (hasImage === "yes" && !item.image) return false;
+    if (hasImage === "no"  &&  item.image) return false;
+    if (showActive === "yes" && !item.active) return false;
+    if (showActive === "no"  &&  item.active) return false;
+    return true;
+  });
 
   async function patch(id, data) {
     try {
@@ -631,11 +649,11 @@ function AccessoriesTab({ headers, apiBase }) {
   return (
     <div>
       {/* Type tabs */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {Object.entries(TYPE_LABELS).map(([key, label]) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => { setTab(key); setSearch(""); setHasPrice(""); setHasImage(""); setShowActive(""); }}
             style={{
               padding: "6px 18px", borderRadius: 8, border: "1px solid var(--border)",
               background: tab === key ? "var(--green)" : "var(--card)",
@@ -651,7 +669,37 @@ function AccessoriesTab({ headers, apiBase }) {
         </button>
       </div>
 
-      {loading ? <p style={{ color: "var(--muted)" }}>Laddar…</p> : (
+      {/* Filter bar */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        <input
+          className="admin-input"
+          style={{ width: 220, marginBottom: 0 }}
+          placeholder={`Sök ${TYPE_LABELS[tab].toLowerCase()}…`}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <select className="admin-input" style={{ width: 150, marginBottom: 0 }} value={hasPrice} onChange={e => setHasPrice(e.target.value)}>
+          <option value="">Alla priser</option>
+          <option value="yes">Har pris</option>
+          <option value="no">Saknar pris</option>
+        </select>
+        <select className="admin-input" style={{ width: 150, marginBottom: 0 }} value={hasImage} onChange={e => setHasImage(e.target.value)}>
+          <option value="">Alla bilder</option>
+          <option value="yes">Har bild</option>
+          <option value="no">Saknar bild</option>
+        </select>
+        <select className="admin-input" style={{ width: 140, marginBottom: 0 }} value={showActive} onChange={e => setShowActive(e.target.value)}>
+          <option value="">Alla statusar</option>
+          <option value="yes">Aktiva</option>
+          <option value="no">Inaktiva</option>
+        </select>
+      </div>
+
+      <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 8 }}>
+        {loading ? "Laddar…" : `${items.length} totalt — visar ${filtered.length}`}
+      </div>
+
+      {loading ? null : (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: "2px solid var(--border)", color: "var(--muted)" }}>
@@ -665,7 +713,7 @@ function AccessoriesTab({ headers, apiBase }) {
             </tr>
           </thead>
           <tbody>
-            {items.map(item => (
+            {filtered.map(item => (
               <tr key={item.id} style={{ borderBottom: "1px solid var(--border)" }}>
                 <td style={{ padding: "4px 8px" }}>
                   {item.image
@@ -1047,8 +1095,36 @@ export default function StoreView({ headers, apiBase }) {
   const [tab, setTab] = useState("stones");
   return (
     <div className="admin-view">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <h2 style={{ margin: 0, color: "var(--text)" }}>Produkthantering</h2>
+      </div>
+
+      {/* Image upload instruction banner */}
+      <div style={{
+        background: "rgba(245,158,11,0.10)",
+        border: "1px solid rgba(245,158,11,0.35)",
+        borderRadius: 10,
+        padding: "12px 16px",
+        marginBottom: 20,
+        display: "flex",
+        gap: 12,
+        alignItems: "flex-start",
+        fontSize: 13,
+        color: "var(--text)",
+        lineHeight: 1.55,
+      }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>📂</span>
+        <div>
+          <strong>Bilder måste laddas upp till servern via FTP innan du lägger till dem här.</strong>
+          {" "}Använd WinSCP och ladda upp bildfilen till mappen{" "}
+          <code style={{ background: "rgba(245,158,11,0.15)", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>/materials/</code>
+          {" "}(stenar) eller{" "}
+          <code style={{ background: "rgba(245,158,11,0.15)", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>/products/</code>
+          {" "}(diskhoar, kranar, hällar) på Loopia-servern.
+          {" "}Ange sedan sökvägen i bildrutafältet, t.ex.{" "}
+          <code style={{ background: "rgba(245,158,11,0.15)", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>/materials/Adamina.jpg</code>.
+          {" "}Bilder som inte finns på servern kommer att visas som tomma.
+        </div>
       </div>
 
       {/* Tab bar */}
