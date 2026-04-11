@@ -11,11 +11,11 @@ import fs from "fs";
 import nodemailer from "nodemailer";
 import { query, migrate } from "./db.mjs";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 // Ensure uploads dir exists
 const UPLOADS_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "marmorskivan-admin";
 const HAS_DB = Boolean(process.env.DATABASE_URL);
