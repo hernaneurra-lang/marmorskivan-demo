@@ -306,11 +306,202 @@ function generateInsights(data) {
   return insights;
 }
 
+// ── Visitors detail view ──────────────────────────────────────────
+function VisitorsView({ headers, apiBase, period }) {
+  const [visitors, setVisitors] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [search, setSearch]     = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${apiBase}/api/admin/analytics/visitors?period=${period}&limit=200`, { headers })
+      .then(r => r.json())
+      .then(d => { setVisitors(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [period, apiBase, JSON.stringify(headers)]);
+
+  if (loading) return <div style={{ color: "var(--muted)", padding: 24 }}>Laddar besökare…</div>;
+  if (!visitors?.length) return <div style={{ color: "var(--muted)", padding: 24 }}>Ingen besökardata ännu.</div>;
+
+  const q = search.toLowerCase();
+  const filtered = visitors.filter(v =>
+    !q ||
+    v.ip?.includes(q) ||
+    v.city?.toLowerCase().includes(q) ||
+    v.region?.toLowerCase().includes(q) ||
+    v.district?.toLowerCase().includes(q) ||
+    v.country?.toLowerCase().includes(q) ||
+    v.isp?.toLowerCase().includes(q)
+  );
+
+  function parseUA(ua) {
+    if (!ua) return "Okänd enhet";
+    let browser = "Okänd webbläsare";
+    if (ua.includes("Edg/")) browser = "Edge";
+    else if (ua.includes("Chrome/")) browser = "Chrome";
+    else if (ua.includes("Firefox/")) browser = "Firefox";
+    else if (ua.includes("Safari/") && !ua.includes("Chrome")) browser = "Safari";
+    else if (ua.includes("OPR/")) browser = "Opera";
+
+    let os = "Okänt OS";
+    if (ua.includes("Windows NT 10")) os = "Windows 10/11";
+    else if (ua.includes("Windows NT 6")) os = "Windows 7/8";
+    else if (ua.includes("Mac OS X")) os = "macOS";
+    else if (ua.includes("iPhone")) os = "iPhone";
+    else if (ua.includes("iPad")) os = "iPad";
+    else if (ua.includes("Android")) os = "Android";
+    else if (ua.includes("Linux")) os = "Linux";
+
+    return `${browser} · ${os}`;
+  }
+
+  function fmtTime(ts) {
+    if (!ts) return "–";
+    return new Date(ts).toLocaleString("sv-SE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function fmtSource(ref) {
+    if (!ref) return "Direkt";
+    if (ref.includes("google")) return "🔍 Google";
+    if (ref.includes("bing")) return "🔍 Bing";
+    if (ref.includes("facebook") || ref.includes("fb.com")) return "📘 Facebook";
+    if (ref.includes("instagram")) return "📸 Instagram";
+    if (ref.includes("marmorskivan.se")) return "🔁 Intern";
+    return "🌐 " + ref.replace(/https?:\/\//, "").split("/")[0];
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+        <input
+          className="admin-input"
+          style={{ width: 280, marginBottom: 0 }}
+          placeholder="Sök IP, stad, region, ISP…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <span style={{ color: "var(--muted)", fontSize: 13 }}>{filtered.length} besökare</span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {filtered.map((v, i) => {
+          const isOpen = expanded === i;
+          const locationParts = [v.district, v.city, v.region, v.country].filter(Boolean);
+          const locationStr = locationParts.join(" › ");
+          return (
+            <div key={i} style={{ background: "var(--card)", borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
+              {/* Summary row */}
+              <div
+                onClick={() => setExpanded(isOpen ? null : i)}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", cursor: "pointer", userSelect: "none" }}
+              >
+                <CountryFlag code={v.country_code} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--text)", fontWeight: 600 }}>{v.ip}</span>
+                    {v.isp && <span style={{ fontSize: 11, color: "var(--muted)", background: "var(--surface2)", padding: "1px 6px", borderRadius: 4 }}>{v.isp}</span>}
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>{v.mobile ? "📱" : "🖥️"} {parseUA(v.user_agent)}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                    📍 {locationStr || "Okänd plats"}
+                    {v.zip && <span style={{ marginLeft: 6 }}>({v.zip})</span>}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>{v.event_count} events · {v.pages_visited} sidor</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>{fmtTime(v.last_seen)}</div>
+                </div>
+                <span style={{ color: "var(--muted)", fontSize: 14, flexShrink: 0 }}>{isOpen ? "▲" : "▼"}</span>
+              </div>
+
+              {/* Expanded detail */}
+              {isOpen && (
+                <div style={{ borderTop: "1px solid var(--border)", padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px", fontSize: 13 }}>
+                  {/* Geo */}
+                  <div>
+                    <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 8, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>📍 Plats</div>
+                    {[
+                      ["Land", v.country],
+                      ["Region/Län", v.region],
+                      ["Stad", v.city],
+                      ["Stadsdel/Distrikt", v.district],
+                      ["Postnummer", v.zip],
+                      ["Koordinater", v.lat && v.lon ? `${Number(v.lat).toFixed(4)}, ${Number(v.lon).toFixed(4)}` : null],
+                      ["Tidszon", v.timezone],
+                      ["ISP / Operatör", v.isp],
+                    ].map(([label, val]) => val ? (
+                      <div key={label} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                        <span style={{ color: "var(--muted)", minWidth: 140 }}>{label}:</span>
+                        <span style={{ color: "var(--text)" }}>
+                          {label === "Koordinater"
+                            ? <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" style={{ color: "var(--green)" }}>{val} 🗺️</a>
+                            : val
+                          }
+                        </span>
+                      </div>
+                    ) : null)}
+                  </div>
+
+                  {/* Enhet & beteende */}
+                  <div>
+                    <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 8, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>💻 Enhet & Beteende</div>
+                    {[
+                      ["Enhet", v.mobile ? "📱 Mobil" : "🖥️ Desktop"],
+                      ["Webbläsare/OS", parseUA(v.user_agent)],
+                      ["Skärmupplösning", v.screen],
+                      ["Språk", v.lang],
+                      ["Källa", fmtSource(v.first_referrer)],
+                      ["Första besök", fmtTime(v.first_seen)],
+                      ["Senaste besök", fmtTime(v.last_seen)],
+                      ["Totalt events", v.event_count],
+                    ].map(([label, val]) => val ? (
+                      <div key={label} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                        <span style={{ color: "var(--muted)", minWidth: 140 }}>{label}:</span>
+                        <span style={{ color: "var(--text)" }}>{val}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+
+                  {/* Besökta sidor */}
+                  {v.pages?.length > 0 && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>🔗 Besökta sidor</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {v.pages.map((p, pi) => (
+                          <span key={pi} style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "var(--text)" }}>{p}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Events */}
+                  {v.events?.length > 0 && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>⚡ Events</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {v.events.map((e, ei) => (
+                          <span key={ei} style={{ background: "rgba(5,150,105,0.1)", border: "1px solid rgba(5,150,105,0.3)", borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "var(--green)" }}>{e}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function AnalyticsView({ headers, apiBase }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("30d");
   const [drilldown, setDrilldown] = useState(null); // { kpi, label }
+  const [activeTab, setActiveTab] = useState("overview");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -375,8 +566,26 @@ export default function AnalyticsView({ headers, apiBase }) {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div style={{ display: "flex", gap: 4, borderBottom: "2px solid var(--border)", padding: "0 24px", background: "var(--surface)" }}>
+        {[
+          { key: "overview", label: "📊 Översikt" },
+          { key: "visitors", label: "👤 Besökare" },
+        ].map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+            padding: "10px 20px", border: "none", background: "none",
+            borderBottom: activeTab === t.key ? "2px solid var(--green)" : "2px solid transparent",
+            color: activeTab === t.key ? "var(--green)" : "var(--muted)",
+            fontWeight: activeTab === t.key ? 700 : 400,
+            cursor: "pointer", fontSize: 14, marginBottom: -2,
+          }}>{t.label}</button>
+        ))}
+      </div>
+
       <div className="admin-content">
-        {loading ? (
+        {activeTab === "visitors" ? (
+          <VisitorsView headers={headers} apiBase={apiBase} period={period} />
+        ) : loading ? (
           <div style={{ color: "var(--muted)" }}>Laddar…</div>
         ) : (
           <>

@@ -126,7 +126,7 @@ function getOpenAI() {
 }
 
 // ── Geo lookup (ip-api.com free, no key needed) ──
-const geoCache = new Map(); // ip → { country, countryCode, city, region, ts }
+const geoCache = new Map();
 async function lookupGeo(ip) {
   if (!ip || ip === "::1" || ip === "127.0.0.1" || ip.startsWith("192.168") || ip.startsWith("10.")) return null;
   if (geoCache.has(ip)) {
@@ -134,11 +134,19 @@ async function lookupGeo(ip) {
     if (Date.now() - c.ts < 3_600_000) return c; // cache 1h
   }
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,zip,lat,lon`);
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,district,zip,lat,lon,isp,org,timezone`);
     if (!res.ok) return null;
     const d = await res.json();
     if (d.status !== "success") return null;
-    const geo = { country: d.country, countryCode: d.countryCode, city: d.city, region: d.regionName, zip: d.zip, lat: d.lat, lon: d.lon, ts: Date.now() };
+    const geo = {
+      country: d.country, countryCode: d.countryCode,
+      city: d.city, region: d.regionName,
+      district: d.district || null,
+      zip: d.zip || null, lat: d.lat || null, lon: d.lon || null,
+      isp: d.isp || null, org: d.org || null,
+      timezone: d.timezone || null,
+      ts: Date.now()
+    };
     geoCache.set(ip, geo);
     return geo;
   } catch { return null; }
@@ -357,23 +365,35 @@ app.post("/api/analytics", async (req, res) => {
     const { event, session, page, ts, fp, referrer, ...rest } = body;
     console.log(`[analytics] event=${event || "MISSING"} ct=${req.headers["content-type"]} body_type=${typeof req.body} has_db=${HAS_DB}`);
     if (HAS_DB && event) {
-      const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
+      const ip = (req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress || "").trim();
       const geo = await lookupGeo(ip);
+      const ua = req.headers["user-agent"] || null;
       await query(
-        `INSERT INTO analytics_events (event, session_id, page, data, country, city, fp_hash, screen, lang, mobile, referrer)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        `INSERT INTO analytics_events
+          (event, session_id, page, data, country, country_code, city, region, district, zip, lat, lon, isp, timezone, fp_hash, screen, lang, mobile, referrer, ip, user_agent)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
         [
           event,
           session || null,
           page || null,
           JSON.stringify({ ts, ...rest }),
           geo?.country || null,
+          geo?.countryCode || null,
           geo?.city || null,
+          geo?.region || null,
+          geo?.district || null,
+          geo?.zip || null,
+          geo?.lat || null,
+          geo?.lon || null,
+          geo?.isp || null,
+          geo?.timezone || null,
           fp?.hash || null,
           fp?.screen || null,
           fp?.lang || null,
           fp?.mobile ?? null,
           referrer || null,
+          ip || null,
+          ua,
         ]
       );
     }
@@ -854,16 +874,16 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
         GROUP BY content ORDER BY count DESC LIMIT 10
       `),
       query(`
-        SELECT country, country_code, COUNT(*) AS sessions
-        FROM chat_sessions
+        SELECT country, country_code, COUNT(DISTINCT COALESCE(ip, fp_hash)) AS sessions
+        FROM analytics_events
         WHERE created_at > NOW() - INTERVAL '${interval}' AND country IS NOT NULL
         GROUP BY country, country_code ORDER BY sessions DESC LIMIT 15
       `),
       query(`
-        SELECT city, country, COUNT(*) AS sessions
-        FROM chat_sessions
+        SELECT city, region, country, country_code, COUNT(DISTINCT COALESCE(ip, fp_hash)) AS sessions
+        FROM analytics_events
         WHERE created_at > NOW() - INTERVAL '${interval}' AND city IS NOT NULL
-        GROUP BY city, country ORDER BY sessions DESC LIMIT 15
+        GROUP BY city, region, country, country_code ORDER BY sessions DESC LIMIT 20
       `),
       query(`SELECT COUNT(*) AS total FROM chat_sessions WHERE mode = 'agent' AND created_at > NOW() - INTERVAL '${interval}'`),
       query(`
@@ -989,6 +1009,42 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
     });
   } catch (e) {
     console.error("[admin] analytics:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin: visitors (per-IP detail) ──
+app.get("/api/admin/analytics/visitors", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json([]);
+  const interval = periodInterval(req.query.period || "30d");
+  const limit = Math.min(parseInt(req.query.limit || "200"), 500);
+  try {
+    const { rows } = await query(`
+      SELECT
+        ip,
+        country, country_code, region, city, district, zip,
+        lat, lon, isp, timezone,
+        MIN(screen) AS screen,
+        MIN(lang) AS lang,
+        BOOL_OR(mobile) AS mobile,
+        MIN(user_agent) AS user_agent,
+        MIN(referrer) AS first_referrer,
+        COUNT(*) AS event_count,
+        COUNT(DISTINCT CASE WHEN event = 'page_view' THEN page END) AS pages_visited,
+        MIN(created_at) AS first_seen,
+        MAX(created_at) AS last_seen,
+        array_agg(DISTINCT page ORDER BY page) FILTER (WHERE page IS NOT NULL AND event = 'page_view') AS pages,
+        array_agg(DISTINCT event ORDER BY event) AS events
+      FROM analytics_events
+      WHERE created_at > NOW() - INTERVAL '${interval}'
+        AND ip IS NOT NULL AND ip != ''
+      GROUP BY ip, country, country_code, region, city, district, zip, lat, lon, isp, timezone
+      ORDER BY last_seen DESC
+      LIMIT ${limit}
+    `);
+    res.json(rows);
+  } catch (e) {
+    console.error("[visitors]", e.message);
     res.status(500).json({ error: e.message });
   }
 });

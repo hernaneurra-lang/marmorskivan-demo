@@ -134,6 +134,16 @@ export async function migrate() {
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS lang TEXT;
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS mobile BOOLEAN;
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS referrer TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS region TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS district TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS zip TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS lon DOUBLE PRECISION;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS isp TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS timezone TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS ip TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS user_agent TEXT;
+    ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS country_code TEXT;
   `);
 
   // Seed default site settings if not present
