@@ -41,6 +41,14 @@ function LandingRouteWrapper() {
   return <Landing onProceed={() => navigate("/app")} />;
 }
 
+// Catches old /material/:name URLs that Google may have indexed
+// Redirects to the calculator so visitors don't hit a blank page
+function LegacyMaterialRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => { navigate("/app", { replace: true }); }, []);
+  return null;
+}
+
 function Loader() {
   return (
     <div className="min-h-[40vh] grid place-items-center text-sm text-gray-500">
@@ -97,6 +105,9 @@ export default function AppRoutes() {
 
         {/* Individual material product pages — must be before catch-all */}
         <Route path="/material/produkt/:slug" element={<MaterialProductPage />} />
+
+        {/* Legacy /material/:name redirects → /bankskiva-sten (Google may have indexed old URLs) */}
+        <Route path="/material/:name" element={<LegacyMaterialRedirect />} />
 
         {/* 2D sketch */}
         <Route path="/ritning" element={<SketchPage />} />
