@@ -1,9 +1,10 @@
 Options -MultiViews
 RewriteEngine On
+RewriteBase /
 
 # Serve existing files and directories as-is
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # Route everything else to index.html (React SPA)
-RewriteRule ^ index.html [L]
+RewriteRule ^ /index.html [L]
