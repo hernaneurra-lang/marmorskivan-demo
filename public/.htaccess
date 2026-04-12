@@ -10,6 +10,7 @@ RewriteRule ^products/ - [L]
 RewriteRule ^materials/ - [L]
 RewriteRule ^hero/ - [L]
 RewriteRule ^mountings/ - [L]
+RewriteRule ^edges/ - [L]
 
 # Serve existing files and directories as-is
 RewriteCond %{REQUEST_FILENAME} !-f

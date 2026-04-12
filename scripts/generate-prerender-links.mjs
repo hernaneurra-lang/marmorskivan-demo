@@ -94,6 +94,8 @@ function buildRoutes() {
     "/material/travertin",
     "/material/semiprecious",
     "/material/atervunnetglas",
+    // Blogg
+    "/blogg",
   ]);
 
   if (fs.existsSync(publicCsv)) {
