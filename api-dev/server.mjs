@@ -1837,6 +1837,109 @@ app.post("/api/admin/upload-image", adminAuth, async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════
+// BLOG
+// ════════════════════════════════════════
+
+// Helper: ISO week number for a date
+function isoWeekYear(d = new Date()) {
+  const day = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(day.getUTCFullYear(), 0, 1));
+  return {
+    week: Math.ceil((((day - yearStart) / 86400000) + 1) / 7),
+    year: day.getUTCFullYear(),
+  };
+}
+
+// Public: list published blog posts (week_number <= current week, same year)
+app.get("/api/blog/posts", async (_req, res) => {
+  if (!HAS_DB) return res.json([]);
+  try {
+    const { week, year } = isoWeekYear();
+    const { rows } = await query(
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, updated_at
+       FROM blog_posts
+       WHERE status != 'draft'
+         AND (publish_year < $2 OR (publish_year = $2 AND week_number <= $1))
+       ORDER BY week_number DESC`,
+      [week, year]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Public: single published post
+app.get("/api/blog/posts/:slug", async (req, res) => {
+  if (!HAS_DB) return res.status(404).json({ error: "not_found" });
+  try {
+    const { week, year } = isoWeekYear();
+    const { rows } = await query(
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, updated_at
+       FROM blog_posts
+       WHERE slug = $1 AND status != 'draft'
+         AND (publish_year < $3 OR (publish_year = $3 AND week_number <= $2))`,
+      [req.params.slug, week, year]
+    );
+    if (!rows.length) return res.status(404).json({ error: "not_found" });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Public: latest published post (for banner)
+app.get("/api/blog/latest", async (_req, res) => {
+  if (!HAS_DB) return res.json(null);
+  try {
+    const { week, year } = isoWeekYear();
+    const { rows } = await query(
+      `SELECT slug, h1, category, week_number FROM blog_posts
+       WHERE status != 'draft'
+         AND (publish_year < $2 OR (publish_year = $2 AND week_number <= $1))
+       ORDER BY publish_year DESC, week_number DESC LIMIT 1`,
+      [week, year]
+    );
+    res.json(rows[0] || null);
+  } catch (e) { res.json(null); }
+});
+
+// Admin: list ALL blog posts
+app.get("/api/admin/blog/posts", adminAuth, async (_req, res) => {
+  if (!HAS_DB) return res.json([]);
+  try {
+    const { rows } = await query(
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, status, updated_at
+       FROM blog_posts ORDER BY week_number ASC`
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: update a blog post
+app.patch("/api/admin/blog/posts/:id", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const { title, meta_description, h1, hero_image, category, read_time, sections, week_number, status } = req.body || {};
+  try {
+    await query(
+      `UPDATE blog_posts SET
+        title = COALESCE($1, title),
+        meta_description = COALESCE($2, meta_description),
+        h1 = COALESCE($3, h1),
+        hero_image = COALESCE($4, hero_image),
+        category = COALESCE($5, category),
+        read_time = COALESCE($6, read_time),
+        sections = COALESCE($7::jsonb, sections),
+        week_number = COALESCE($8, week_number),
+        status = COALESCE($9, status),
+        updated_at = NOW()
+       WHERE id = $10`,
+      [title||null, meta_description||null, h1||null, hero_image||null, category||null,
+       read_time||null, sections ? JSON.stringify(sections) : null,
+       week_number||null, status||null, req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Start ──
 async function start() {
   if (HAS_DB) {

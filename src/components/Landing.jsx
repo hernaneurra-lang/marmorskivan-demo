@@ -199,6 +199,9 @@ export default function Landing() {
           </a>
 
           <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-gray-700">
+            <a href="/blogg" className="hover:text-emerald-700 transition-colors">
+              {t("nav.blog", { defaultValue: "Blogg" })}
+            </a>
             <a href="/boka-tid" className="hover:text-emerald-700 transition-colors">
               {t("nav.book", { defaultValue: "Boka möte" })}
             </a>
@@ -348,6 +351,44 @@ export default function Landing() {
           </div>
         </Modal>
       )}
+
+      {/* Blogg-teaser */}
+      <section className="relative z-10 bg-white/85 backdrop-blur border-t">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Guider &amp; inspiration</h2>
+            <a href="/blogg" className="text-sm font-semibold text-emerald-700 hover:underline">
+              Se alla artiklar →
+            </a>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <a href="/blogg/marmor-vs-granit-bankskiva" className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-md transition-shadow" style={{ minHeight: 200 }}>
+              <img src="/images/materials/marmor-hero.jpg" alt="Marmor vs granit" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="relative flex flex-col justify-end p-5 h-full text-white" style={{ minHeight: 200 }}>
+                <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full w-fit mb-2">Jämförelse</span>
+                <div className="font-bold text-sm leading-snug">Marmor eller granit bänkskiva?</div>
+              </div>
+            </a>
+            <a href="/blogg/bankskiva-underhall-impregnering" className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-md transition-shadow" style={{ minHeight: 200 }}>
+              <img src="/images/materials/kalksten-hero.jpg" alt="Underhåll bänkskiva" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="relative flex flex-col justify-end p-5 h-full text-white" style={{ minHeight: 200 }}>
+                <span className="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full w-fit mb-2">Skötsel</span>
+                <div className="font-bold text-sm leading-snug">Underhåll och impregnering</div>
+              </div>
+            </a>
+            <a href="/blogg/svart-bankskiva-kok" className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-md transition-shadow" style={{ minHeight: 200 }}>
+              <img src="/images/materials/granit-hero.jpg" alt="Svart bänkskiva" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="relative flex flex-col justify-end p-5 h-full text-white" style={{ minHeight: 200 }}>
+                <span className="text-xs font-semibold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full w-fit mb-2">Inspiration</span>
+                <div className="font-bold text-sm leading-snug">Svart bänkskiva i kök</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
 
       <SiteFooter />
     </main>

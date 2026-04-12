@@ -106,10 +106,28 @@ export async function migrate() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS blog_posts (
+      id SERIAL PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      meta_description TEXT DEFAULT '',
+      h1 TEXT NOT NULL,
+      hero_image TEXT DEFAULT '',
+      category TEXT DEFAULT '',
+      read_time TEXT DEFAULT '5 min',
+      sections JSONB DEFAULT '[]',
+      week_number INTEGER NOT NULL,
+      publish_year INTEGER DEFAULT 2026,
+      status TEXT DEFAULT 'scheduled',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id);
     CREATE INDEX IF NOT EXISTS analytics_events_created_idx ON analytics_events(created_at);
     CREATE INDEX IF NOT EXISTS analytics_events_event_idx ON analytics_events(event);
     CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings(booking_date);
+    CREATE INDEX IF NOT EXISTS blog_posts_week_idx ON blog_posts(week_number, publish_year);
   `);
 
   // Safe column additions for existing deployments
@@ -427,6 +445,89 @@ export async function migrate() {
       `INSERT INTO knowledge_base (question, answer)
        SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM knowledge_base WHERE question = $1)`,
       [question, answer]
+    );
+  }
+
+  // ── Blog posts seed (52 posts, ON CONFLICT DO NOTHING so edits are preserved) ──
+  const blogSeed = [
+    // Week 1-8: existing posts with full sections (loaded from JSON if available)
+    { slug: "marmor-vs-granit-bankskiva",     h1: "Marmor eller granit bänkskiva? Komplett jämförelse",    title: "Marmor eller granit bänkskiva? | Marmorskivan.se",            category: "Jämförelse",  hero_image: "/images/materials/Marmor/marmor-kitchen.jpg",                    week: 1  },
+    { slug: "bankskiva-tjocklek-guide",        h1: "Bänkskiva tjocklek – 20, 30 eller 40 mm?",              title: "20mm eller 30mm bänkskiva? | Marmorskivan.se",                category: "Guide",       hero_image: "/images/materials/Granit/granit-hero.jpg.jpg",                   week: 2  },
+    { slug: "bankskiva-underhall-impregnering",h1: "Underhåll av stenbänkskiva – komplett skötselguide",    title: "Underhåll och impregnering av bänkskiva | Marmorskivan.se",  category: "Skötsel",     hero_image: "/images/materials/Kalksten/modern kitchen with real limestone countertop.jpg", week: 3 },
+    { slug: "svart-bankskiva-kok",             h1: "Svart bänkskiva i kök – guide och materialtips",        title: "Svart bänkskiva i kök | Marmorskivan.se",                    category: "Inspiration", hero_image: "/images/materials/Granit/granit-kitchen.jpg.jpg",                week: 4  },
+    { slug: "vit-marmor-bankskiva",            h1: "Vit marmorbänkskiva – guide till sorter, skötsel och pris", title: "Vit marmorbänkskiva | Marmorskivan.se",                   category: "Material",    hero_image: "/images/materials/Marmor/marmor-hero.jpg",                       week: 5  },
+    { slug: "kvartsit-bankskiva",              h1: "Kvartsit bänkskiva – guide till det missförstådda materialet", title: "Kvartsit bänkskiva | Marmorskivan.se",                 category: "Material",    hero_image: "/images/materials/Kvartsit/quartzite kitchen countertop luxury.jpg", week: 6 },
+    { slug: "bankskiva-l-form-pris",           h1: "Bänkskiva L-form – guide till pris och mätning",        title: "Bänkskiva L-form | Marmorskivan.se",                         category: "Guide",       hero_image: "/images/materials/Komposit/komposit-hero.jpg.jpg",               week: 7  },
+    { slug: "renovera-kok-byta-bankskiva",     h1: "Byta bänkskiva – guide till renovering och budget",     title: "Byta bänkskiva – köksrenovering | Marmorskivan.se",          category: "Guide",       hero_image: "/images/materials/Travertin/travertine countertop in modern an luxurious kitchen.jpg", week: 8 },
+    // Week 9-11: Trender tidigt
+    { slug: "sten-trender-2026",               h1: "Stentrender 2026 – vad väljer arkitekterna nu?",         title: "Stentrender 2026 | Marmorskivan.se",                         category: "Inspiration", hero_image: "/images/materials/Kvartsit/modern kitchen quartzite countertop.jpg", week: 9 },
+    { slug: "natursten-okar-fastighetsvarde",  h1: "Natursten och fastighetsvärde – vad säger mäklarna?",   title: "Natursten ökar fastighetsvärde | Marmorskivan.se",           category: "Guide",       hero_image: "/images/materials/Marmor/marmor-bathroom.jpg",                  week: 10 },
+    { slug: "boka-tid-guide-stenbutik",        h1: "Så går ett besök i stenbutik till – vad du bör ta med", title: "Guide: besök i stenbutik | Marmorskivan.se",                 category: "Guide",       hero_image: "/images/materials/Marmor/marmor-factory.jpg",                   week: 11 },
+    // Week 12+: Stenar, regioner, guider blandade
+    { slug: "carrara-bianco-marmor",           h1: "Carrara Bianco – världens mest kända marmor",           title: "Carrara Bianco marmor | Marmorskivan.se",                    category: "Material",    hero_image: "/images/materials/Marmor/marmor-hero.jpg",                       week: 12 },
+    { slug: "carrara-regionen-italien",        h1: "Carrara-regionen i Italien – 2000 år av marmorbrytning",title: "Carrara-regionen i Italien | Marmorskivan.se",               category: "Region",      hero_image: "/images/materials/Marmor/marmor-quarry.jpg",                     week: 13 },
+    { slug: "kantprofiler-guide",              h1: "Kantprofiler – rakskuren, facettad, bullnose och mer",   title: "Kantprofiler guide | Marmorskivan.se",                       category: "Guide",       hero_image: "/images/materials/Granit/granit-factory.jpg.jpg",                week: 14 },
+    { slug: "calacatta-gold-marmor",           h1: "Calacatta Gold – bland de lyxigaste marmorsorterna",    title: "Calacatta Gold marmor | Marmorskivan.se",                    category: "Material",    hero_image: "/images/materials/Marmor/marmor-kitchen.jpg",                    week: 15 },
+    { slug: "portugal-alentejo-marmor",        h1: "Alentejo, Portugal – Europas största marmorbrott",      title: "Alentejo Portugal marmor | Marmorskivan.se",                 category: "Region",      hero_image: "/images/materials/Marmor/marmor-quarry.jpg",                     week: 16 },
+    { slug: "eurocucina-milan-massa",          h1: "Eurocucina Milano – kökstrender och bänkskivor",        title: "Eurocucina Milano 2026 | Marmorskivan.se",                   category: "Mässa",       hero_image: "/images/materials/Komposit/white quartz sinterered countertop kitchen.jpg", week: 17 },
+    { slug: "statuario-marmor",                h1: "Statuario – den vitaste marmorn från Carrara",          title: "Statuario marmor | Marmorskivan.se",                         category: "Material",    hero_image: "/images/materials/Marmor/marmor-hero.jpg",                       week: 18 },
+    { slug: "travertin-guide-bankskiva",       h1: "Travertin bänkskiva – guide till det romerska materialet", title: "Travertin bänkskiva guide | Marmorskivan.se",             category: "Material",    hero_image: "/images/materials/Travertin/travertine countertop in modern an luxurious kitchen.jpg", week: 19 },
+    { slug: "roman-classic-travertin",         h1: "Roman Classic Travertin – tidlös italiensk sten",       title: "Roman Classic Travertin | Marmorskivan.se",                  category: "Material",    hero_image: "/images/materials/Travertin/travertine quarry in italy.jpg",     week: 20 },
+    { slug: "index-dubai-massa",               h1: "INDEX Dubai – lyxinredning och natursten i Mellanöstern",title: "INDEX Dubai 2026 | Marmorskivan.se",                         category: "Mässa",       hero_image: "/images/materials/Onyx/Onxy Smeraldo luxury autonova kitchen.jpg", week: 21 },
+    { slug: "iran-onyx-travertin",             h1: "Iran – travertin och onyx i unikt urval",               title: "Iran – travertin och onyx | Marmorskivan.se",                category: "Region",      hero_image: "/images/materials/Travertin/travertine slabs factory verona.jpg", week: 22 },
+    { slug: "nero-marquina-svart-marmor",      h1: "Nero Marquina – spansk svart marmor med vita ådror",    title: "Nero Marquina svart marmor | Marmorskivan.se",               category: "Material",    hero_image: "/images/materials/Granit/granit-kitchen.jpg.jpg",                week: 23 },
+    { slug: "spanien-marmor-macael",           h1: "Macael, Spanien – vit marmor sedan romartiden",         title: "Macael Spanien marmor | Marmorskivan.se",                    category: "Region",      hero_image: "/images/materials/Marmor/marmor-quarry.jpg",                     week: 24 },
+    { slug: "stone-tec-nurnberg-massa",        h1: "Stone+tec Nürnberg – stenteknik och innovation",        title: "Stone+tec Nürnberg 2026 | Marmorskivan.se",                  category: "Mässa",       hero_image: "/images/materials/Granit/granit-factory.jpg.jpg",                week: 25 },
+    { slug: "azul-valverde-kvartsit",          h1: "Azul Valverde – den populära gröna kvartsiten",         title: "Azul Valverde kvartsit | Marmorskivan.se",                   category: "Material",    hero_image: "/images/materials/Kvartsit/quartzite kitchen countertop luxury.jpg", week: 26 },
+    { slug: "brasilien-stenbrott-exotic",      h1: "Brasilien – världens centrum för exotisk natursten",    title: "Brasilien – exotisk natursten | Marmorskivan.se",            category: "Region",      hero_image: "/images/materials/Kvartsit/big quartzite quarry big machinery.jpg", week: 27 },
+    { slug: "diskho-val-sten-bankskiva",       h1: "Välja diskho till stenbänkskiva – komplett guide",      title: "Välja diskho till stenbänkskiva | Marmorskivan.se",          category: "Guide",       hero_image: "/images/materials/Komposit/komposit-hero.jpg.jpg",               week: 28 },
+    { slug: "taj-mahal-kvartsit",              h1: "Taj Mahal kvartsit – Super Whites bästa alternativ",    title: "Taj Mahal kvartsit | Marmorskivan.se",                       category: "Material",    hero_image: "/images/materials/Kvartsit/quartzite kitchen countertop luxury.jpg", week: 29 },
+    { slug: "indien-granite-rajasthan",        h1: "Indien och Rajasthan – granit i globala kök",           title: "Indien och Rajasthan granit | Marmorskivan.se",              category: "Region",      hero_image: "/images/materials/Granit/granit-quarry.jpg.jpg",                 week: 30 },
+    { slug: "kalksten-bankskiva-guide",        h1: "Kalksten bänkskiva – mjuk estetik med krävande skötsel",title: "Kalksten bänkskiva guide | Marmorskivan.se",                 category: "Material",    hero_image: "/images/materials/Kalksten/modern kitchen with real limestone countertop.jpg", week: 31 },
+    { slug: "portoro-marmor",                  h1: "Portoro – svart marmor med guldådror från Ligurien",    title: "Portoro marmor | Marmorskivan.se",                           category: "Material",    hero_image: "/images/materials/Granit/granit-kitchen.jpg.jpg",                week: 32 },
+    { slug: "turkiet-marmor-afyon",            h1: "Turkiet – en av världens största marmorexportörer",     title: "Turkiet marmor | Marmorskivan.se",                           category: "Region",      hero_image: "/images/materials/Marmor/marmor-quarry.jpg",                     week: 33 },
+    { slug: "stanksydd-sten-guide",            h1: "Stänkskydd i sten – material, mått och montage",        title: "Stänkskydd i sten | Marmorskivan.se",                        category: "Guide",       hero_image: "/images/materials/Travertin/travertine bathroom tiles in modern kitchen with suthel viens.jpg", week: 34 },
+    { slug: "verde-guatemala-marmor",          h1: "Verde Guatemala – grön natursten med djup karaktär",    title: "Verde Guatemala natursten | Marmorskivan.se",                category: "Material",    hero_image: "/images/materials/Kvartsit/modern kitchen quartzite countertop.jpg", week: 35 },
+    { slug: "grekland-thassos-vit-marmor",     h1: "Thassos, Grekland – renaste vita marmorn i världen",    title: "Thassos Grekland vit marmor | Marmorskivan.se",              category: "Region",      hero_image: "/images/materials/Marmor/marmor-hero.jpg",                       week: 36 },
+    { slug: "terrazzo-bankskiva-guide",        h1: "Terrazzo – hur 1920-talets golv blev 2020-talets kök",  title: "Terrazzo bänkskiva guide | Marmorskivan.se",                 category: "Material",    hero_image: "/images/materials/Terrazzo/terrazzo countertop kitchen.jpg",     week: 37 },
+    { slug: "marmomacc-verona-massa",          h1: "Marmomacc Verona – världens största stenmässa",         title: "Marmomacc Verona 2026 | Marmorskivan.se",                    category: "Mässa",       hero_image: "/images/materials/Granit/granit-factory.jpg.jpg",                week: 38 },
+    { slug: "cersaie-bologna-massa",           h1: "Cersaie Bologna – keramik och sten för kök och bad",    title: "Cersaie Bologna 2026 | Marmorskivan.se",                     category: "Mässa",       hero_image: "/images/materials/Terrazzo/terrazzo countertop kitchen.jpg",     week: 39 },
+    { slug: "absolute-black-granit",           h1: "Absolute Black – den renaste svarta graniten",          title: "Absolute Black granit | Marmorskivan.se",                    category: "Material",    hero_image: "/images/materials/Granit/granit-kitchen.jpg.jpg",                week: 40 },
+    { slug: "zimbabwe-black-granit",           h1: "Zimbabwe Black – Afrikas svar på Absolute Black",       title: "Zimbabwe Black granit | Marmorskivan.se",                    category: "Region",      hero_image: "/images/materials/Granit/granit-quarry.jpg.jpg",                 week: 41 },
+    { slug: "natursten-vs-komposit-miljo",     h1: "Natursten vs komposit – miljöperspektivet",             title: "Natursten vs komposit miljö | Marmorskivan.se",              category: "Guide",       hero_image: "/images/materials/Kvartsit/big quartzite quarry big machinery.jpg", week: 42 },
+    { slug: "blue-pearl-granit",               h1: "Blue Pearl – norsk granit med blå glitter",             title: "Blue Pearl norsk granit | Marmorskivan.se",                  category: "Material",    hero_image: "/images/materials/Granit/granit-hero.jpg.jpg",                   week: 43 },
+    { slug: "norge-blaa-sten-larvikite",       h1: "Norge – Blue Pearl och Larvikite",                      title: "Norge – Blue Pearl och Larvikite | Marmorskivan.se",         category: "Region",      hero_image: "/images/materials/Granit/granit-quarry.jpg.jpg",                 week: 44 },
+    { slug: "koket-layout-bankskiva",          h1: "Kök-layout och bänkskiva – U-form, L-form och köksö",  title: "Kök-layout och bänkskiva | Marmorskivan.se",                 category: "Guide",       hero_image: "/images/materials/Marmor/marmor-kitchen.jpg",                    week: 45 },
+    { slug: "rosa-porrino-granit",             h1: "Rosa Porrino – spansk rosa granit med tidlös charm",    title: "Rosa Porrino granit | Marmorskivan.se",                      category: "Material",    hero_image: "/images/materials/Granit/granit-bathroom.jpg.jpg",               week: 46 },
+    { slug: "semiprecious-stone-bankskiva",    h1: "Halvädelstensbänkskivor – agat, ametist och malakit",   title: "Halvädelstensbänkskivor | Marmorskivan.se",                  category: "Material",    hero_image: "/images/materials/SemiPrecious/luxury kitchen semiprecious countertop.jpg", week: 47 },
+    { slug: "sea-pearl-kvartsit",              h1: "Sea Pearl – kvartsit med ocean-ådring",                 title: "Sea Pearl kvartsit | Marmorskivan.se",                       category: "Material",    hero_image: "/images/materials/Kvartsit/quartzite kitchen countertop luxury.jpg", week: 48 },
+    { slug: "nat-och-torr-sten-finish",        h1: "Polerat, borstat eller läderfinish – vilken yta passar?",title: "Stenfinish guide | Marmorskivan.se",                        category: "Guide",       hero_image: "/images/materials/Marmor/marmor-hero.jpg",                       week: 49 },
+    { slug: "onyx-honey-green",                h1: "Onyx – genomlyst lyx i kök och badrum",                 title: "Onyx bänkskiva | Marmorskivan.se",                           category: "Material",    hero_image: "/images/materials/Onyx/Onxy Smeraldo luxury autonova kitchen.jpg", week: 50 },
+    { slug: "atervunnet-glas-bankskiva",       h1: "Återvunnet glas bänkskiva – det hållbaraste alternativet", title: "Återvunnet glas bänkskiva | Marmorskivan.se",            category: "Material",    hero_image: "/images/materials/Återvunnet Glas/recycled glass countertop kitchen like brand magna from germany.jpg", week: 51 },
+    { slug: "keramik-bankskiva-guide",         h1: "Keramik (Dekton/Lapitec) – ultra-tåligt och modernt",  title: "Keramik bänkskiva guide | Marmorskivan.se",                  category: "Material",    hero_image: "/images/materials/Terrazzo/A modern kitchen with sleek, minimalist cabinetry and countertops made of polished Perlato terrazzo, featuring subtle veining and a warm, neutral color palette. The lighting is bright and even, highlighting the lux.jpg", week: 52 },
+  ];
+
+  // Load existing sections from blog-posts.json if available (first 8 posts)
+  let existingSections = {};
+  try {
+    const jsonPath = path.join(__dirname, "../public/data/blog-posts.json");
+    if (fs.existsSync(jsonPath)) {
+      const jsonData = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+      for (const post of jsonData) {
+        existingSections[post.slug] = post.sections || [];
+      }
+    }
+  } catch (e) {
+    console.warn("[blog seed] could not read blog-posts.json:", e.message);
+  }
+
+  for (const p of blogSeed) {
+    const sections = existingSections[p.slug] || [];
+    await db.query(
+      `INSERT INTO blog_posts (slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,2026,'scheduled')
+       ON CONFLICT (slug) DO NOTHING`,
+      [p.slug, p.title, "", p.h1, p.hero_image, p.category, "5 min", JSON.stringify(sections), p.week]
     );
   }
 

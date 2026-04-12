@@ -8,9 +8,14 @@ import Landing from "../components/Landing.jsx";
 import App from "../App.jsx";
 import ChatWidget from "../chat/ChatWidget.jsx";
 import AdminPage from "../admin/AdminPage.jsx";
+import NewBlogBanner from "../components/NewBlogBanner.jsx";
 
 // Sketch (lazy)
 const SketchPage = lazy(() => import("../pages/SketchPage.jsx"));
+
+// Blog (lazy)
+const BlogListPage = lazy(() => import("../pages/BlogListPage.jsx"));
+const BlogPostPage = lazy(() => import("../pages/BlogPostPage.jsx"));
 
 // Individual material product page (lazy)
 const MaterialProductPage = lazy(() => import("../pages/MaterialProductPage.jsx"));
@@ -70,11 +75,19 @@ function ChatWidgetWrapper() {
   return <ChatWidget />;
 }
 
+function BlogBannerWrapper() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/ritning")) return null;
+  return <NewBlogBanner />;
+}
+
 export default function AppRoutes() {
   return (
     <Suspense fallback={<Loader />}>
       <SEOWrapper />
       <ChatWidgetWrapper />
+      <BlogBannerWrapper />
       <Routes>
         {/* Startsida */}
         <Route path="/" element={<LandingRouteWrapper />} />
@@ -108,6 +121,10 @@ export default function AppRoutes() {
 
         {/* Legacy /material/:name redirects → /bankskiva-sten (Google may have indexed old URLs) */}
         <Route path="/material/:name" element={<LegacyMaterialRedirect />} />
+
+        {/* Blogg */}
+        <Route path="/blogg" element={<BlogListPage />} />
+        <Route path="/blogg/:slug" element={<BlogPostPage />} />
 
         {/* 2D sketch */}
         <Route path="/ritning" element={<SketchPage />} />
