@@ -12,6 +12,7 @@
     "build:fast": "vite build",
     "build:nositemap": "cross-env SKIP_SITEMAP=1 node scripts/build.mjs",
     "build:noprerender": "cross-env SKIP_PRERENDER=1 node scripts/build.mjs",
+    "build:fresh": "rimraf dist && cross-env SKIP_PRERENDER=1 node scripts/build.mjs",
     "preview": "vite preview",
     "api": "node api-dev/server.mjs"
   },

@@ -1886,6 +1886,22 @@ app.get("/api/blog/posts/:slug", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Preview: any post by slug (requires admin token) — bypasses week check
+app.get("/api/blog/preview/:slug", async (req, res) => {
+  if (!HAS_DB) return res.status(404).json({ error: "not_found" });
+  const token = req.query.token;
+  if (token !== ADMIN_TOKEN) return res.status(401).json({ error: "unauthorized" });
+  try {
+    const { rows } = await query(
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, title_color, updated_at
+       FROM blog_posts WHERE slug = $1`,
+      [req.params.slug]
+    );
+    if (!rows.length) return res.status(404).json({ error: "not_found" });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Public: latest published post (for banner)
 app.get("/api/blog/latest", async (_req, res) => {
   if (!HAS_DB) return res.json(null);

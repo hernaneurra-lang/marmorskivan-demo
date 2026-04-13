@@ -1,22 +1,29 @@
 // Path: src/pages/BlogPostPage.jsx
 import { useState, useEffect } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, useSearchParams, Navigate } from "react-router-dom";
 import StoneDetailPage from "../components/StoneDetailPage";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 
 export default function BlogPostPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const previewToken = searchParams.get("preview");
   const [post, setPost] = useState(undefined); // undefined=loading, null=not found
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/blog/posts/${slug}`)
+    const url = previewToken
+      ? `${API_BASE}/api/blog/preview/${slug}?token=${previewToken}`
+      : `${API_BASE}/api/blog/posts/${slug}`;
+
+    fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();
       })
       .then(setPost)
       .catch(() => {
+        if (previewToken) { setPost(null); return; }
         // Fallback: try static JSON
         fetch("/data/blog-posts.json")
           .then(r => r.json())
@@ -26,7 +33,7 @@ export default function BlogPostPage() {
           })
           .catch(() => setPost(null));
       });
-  }, [slug]);
+  }, [slug, previewToken]);
 
   if (post === undefined) {
     return <div className="min-h-[40vh] grid place-items-center text-sm text-gray-500">Laddar…</div>;
@@ -34,15 +41,22 @@ export default function BlogPostPage() {
   if (post === null) return <Navigate to="/blogg" replace />;
 
   return (
-    <StoneDetailPage
-      title={post.title}
-      metaDescription={post.meta_description || post.metaDescription}
-      h1={post.h1}
-      heroImage={post.hero_image || post.heroImage}
-      sections={post.sections || []}
-      breadcrumbMiddleLabel="Blogg"
-      breadcrumbMiddleTo="/blogg"
-      textSize="base"
-    />
+    <>
+      {previewToken && (
+        <div style={{ background: "#fbbf24", color: "#78350f", padding: "8px 20px", fontSize: 13, fontWeight: 600, textAlign: "center" }}>
+          👁 Förhandsvisning – inte publicerad än (v.{post.week_number} {post.publish_year})
+        </div>
+      )}
+      <StoneDetailPage
+        title={post.title}
+        metaDescription={post.meta_description || post.metaDescription}
+        h1={post.h1}
+        heroImage={post.hero_image || post.heroImage}
+        sections={post.sections || []}
+        breadcrumbMiddleLabel="Blogg"
+        breadcrumbMiddleTo="/blogg"
+        textSize="base"
+      />
+    </>
   );
 }
