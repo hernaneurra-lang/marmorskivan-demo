@@ -290,6 +290,22 @@ export default function BlogView({ headers, apiBase }) {
     else toast("Kunde inte spara", "error");
   };
 
+  const syncFromJson = async (post) => {
+    try {
+      const r = await fetch("/data/blog-posts.json");
+      const all = await r.json();
+      const found = all.find(p => p.slug === post.slug);
+      if (!found || !found.sections?.length) { toast("Hittade inga sektioner i JSON", "error"); return; }
+      const pr = await fetch(`${apiBase}/api/admin/blog/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ sections: found.sections }),
+      });
+      if (pr.ok) { toast(`Synkat ${found.sections.length} sektioner från JSON!`, "success", "✅"); load(); }
+      else toast("Kunde inte synka", "error");
+    } catch (e) { toast("Fel: " + e.message, "error"); }
+  };
+
   const { week: cw, year: cy } = currentISOWeek();
 
   const filtered = posts.filter(p => {
@@ -366,7 +382,10 @@ export default function BlogView({ headers, apiBase }) {
                         {st.label}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                    <td style={{ padding: "10px 12px", textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <button className="btn-secondary" style={{ fontSize: 12, padding: "4px 10px" }} title="Synka sektioner från blog-posts.json" onClick={() => syncFromJson(post)}>
+                        ↻ Synka
+                      </button>
                       <button className="btn-secondary" style={{ fontSize: 12, padding: "4px 12px" }} onClick={() => setEditPost(post)}>
                         Redigera
                       </button>
