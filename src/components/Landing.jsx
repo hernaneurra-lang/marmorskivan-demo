@@ -1,5 +1,5 @@
 // Path: src/components/Landing.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { trackEvent } from "../lib/analytics";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,21 @@ import Modal from "./modal";
 import MaterialLinks from "./MaterialLinks";
 import SiteFooter from "./SiteFooter";
 import { useSettings } from "../context/SettingsContext.jsx";
+
+const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
+
+// Hämtar kategori-färg för blog-badge
+function categoryColor(cat) {
+  const map = {
+    "Jämförelse": "bg-blue-100 text-blue-800",
+    "Skötsel": "bg-amber-100 text-amber-800",
+    "Inspiration": "bg-purple-100 text-purple-800",
+    "Material": "bg-emerald-100 text-emerald-800",
+    "Guide": "bg-rose-100 text-rose-800",
+    "Trend": "bg-indigo-100 text-indigo-800",
+  };
+  return map[cat] || "bg-gray-100 text-gray-700";
+}
 
 /* -------------------------------------------------------
    DYNAMISK VECKO-LOGIK (Fokus på Gattoni & Intra med i18n)
@@ -148,6 +163,20 @@ export default function Landing() {
     ? (weekData[uiLang] || weekData["sv"]) 
     : (uiLang === "sv" ? "Prisgaranti på alla våra stenskivor." : "Price match guarantee on all our stone surfaces.");
 
+  const [blogPosts, setBlogPosts] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/blog/posts?limit=3`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => setBlogPosts(Array.isArray(data) ? data.slice(0, 3) : []))
+      .catch(() => {
+        fetch("/data/blog-posts.json")
+          .then(r => r.json())
+          .then(data => setBlogPosts(data.slice(0, 3)))
+          .catch(() => {});
+      });
+  }, []);
+
   const goToApp = (e) => {
     e.preventDefault();
     trackEvent("cta_click", { source: "landing" });
@@ -266,33 +295,140 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── AI Visualizer promo banner ── */}
-      <section className="relative z-10 bg-gradient-to-r from-emerald-700 to-emerald-600 border-y border-emerald-500">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">✨</span>
-            <div>
-              <span className="text-white font-semibold text-sm">
-                {uiLang === "sv" ? "Ny: Se vald bänkskiva direkt i ditt kök" : "New: See your chosen worktop in your own kitchen"}
-              </span>
-              <span className="hidden sm:inline text-emerald-100 text-sm ml-2">
-                {uiLang === "sv"
-                  ? "— ladda upp ett foto av ditt kök så byts bänkskivorna ut mot valt material"
-                  : "— upload a kitchen photo and the worktop is replaced with your chosen material"}
-              </span>
+      {/* ── AI Visualizer — stor sektion ── */}
+      <section className="relative z-10 bg-stone-50 border-t border-stone-200">
+        <div className="max-w-6xl mx-auto px-6 py-12 md:py-16 grid md:grid-cols-2 gap-10 items-center">
+          {/* Text */}
+          <div>
+            <span className="inline-block text-xs font-bold tracking-widest uppercase text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full mb-4">
+              ✨ {uiLang === "sv" ? "Ny funktion" : "New feature"}
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight mb-4">
+              {uiLang === "sv"
+                ? "Se din valda bänkskiva direkt i ditt eget kök"
+                : "See your chosen worktop in your own kitchen"}
+            </h2>
+            <p className="text-gray-600 leading-relaxed mb-8">
+              {uiLang === "sv"
+                ? "Ladda upp ett foto av ditt kök — AI:n identifierar bänkytan och byter ut den mot ditt valda material på sekunder. Inget gissande, inget missnöje."
+                : "Upload a photo of your kitchen — AI identifies the worktop area and replaces it with your chosen material in seconds. No guessing, no disappointment."}
+            </p>
+            <button
+              type="button"
+              onClick={goToApp}
+              style={{ backgroundColor: siteSettings.accent_color || "#059669" }}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-white font-semibold shadow-md hover:opacity-90 active:scale-95 transition-all text-base"
+            >
+              {uiLang === "sv" ? "Prova gratis — det tar 30 sekunder" : "Try free — takes 30 seconds"}
+              <span className="text-lg">→</span>
+            </button>
+          </div>
+          {/* Visual */}
+          <div className="relative rounded-2xl overflow-hidden shadow-xl border border-stone-200 aspect-[4/3] bg-stone-200">
+            <img
+              src="/hero/hero.jpg"
+              alt="AI köksbänksvisualisering"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-lg flex-shrink-0">🪨</div>
+              <div>
+                <div className="text-xs font-semibold text-gray-800">{uiLang === "sv" ? "AI byter ut bänkskivan" : "AI replaces the worktop"}</div>
+                <div className="text-xs text-gray-500">{uiLang === "sv" ? "Välj material → ladda upp foto → se resultatet" : "Choose material → upload photo → see the result"}</div>
+              </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={goToApp}
-            className="flex-shrink-0 px-4 py-2 bg-white text-emerald-700 text-sm font-bold rounded-xl hover:bg-emerald-50 transition shadow-sm whitespace-nowrap"
-          >
-            {uiLang === "sv" ? "Prova gratis →" : "Try for free →"}
-          </button>
         </div>
       </section>
 
       <ProcessSteps />
+
+      {/* ── Blogg-teaser (dynamisk) ── */}
+      {blogPosts.length > 0 && (
+        <section className="relative z-10 bg-white/90 backdrop-blur border-t">
+          <div className="max-w-6xl mx-auto px-6 py-12">
+            <div className="flex items-center justify-between mb-7">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Inspiration &amp; guider</h2>
+                <p className="text-sm text-gray-500 mt-1">Expertartiklar om stenskivor, skötsel och trender</p>
+              </div>
+              <a href="/blogg" className="hidden sm:flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:underline">
+                Se alla artiklar →
+              </a>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-5">
+              {/* Featured — stor */}
+              {blogPosts[0] && (() => {
+                const p = blogPosts[0];
+                const slug = p.slug;
+                const image = p.hero_image || p.heroImage;
+                const label = p.h1 || p.title;
+                const cat = p.category;
+                return (
+                  <a
+                    href={`/blogg/${slug}`}
+                    key={slug}
+                    className="group relative rounded-2xl overflow-hidden block shadow-md hover:shadow-xl transition-shadow sm:col-span-2"
+                    style={{ minHeight: 280 }}
+                  >
+                    {image && (
+                      <img
+                        src={image}
+                        alt={label}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                    <div className="relative flex flex-col justify-end p-6 h-full text-white" style={{ minHeight: 280 }}>
+                      {cat && <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full w-fit mb-3 ${categoryColor(cat)}`}>{cat}</span>}
+                      <div className="font-bold text-lg leading-snug">{label}</div>
+                      <div className="mt-2 text-sm text-white/70 group-hover:text-white/90 transition-colors">Läs mer →</div>
+                    </div>
+                  </a>
+                );
+              })()}
+
+              {/* 2 smala kort */}
+              <div className="flex flex-col gap-5">
+                {blogPosts.slice(1, 3).map(p => {
+                  const slug = p.slug;
+                  const image = p.hero_image || p.heroImage;
+                  const label = p.h1 || p.title;
+                  const cat = p.category;
+                  return (
+                    <a
+                      href={`/blogg/${slug}`}
+                      key={slug}
+                      className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-lg transition-shadow flex-1"
+                      style={{ minHeight: 120 }}
+                    >
+                      {image && (
+                        <img
+                          src={image}
+                          alt={label}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                      <div className="relative flex flex-col justify-end p-4 h-full text-white" style={{ minHeight: 120 }}>
+                        {cat && <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit mb-1.5 ${categoryColor(cat)}`}>{cat}</span>}
+                        <div className="font-bold text-sm leading-snug">{label}</div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="sm:hidden mt-5 text-center">
+              <a href="/blogg" className="text-sm font-semibold text-emerald-700 hover:underline">Se alla artiklar →</a>
+            </div>
+          </div>
+        </section>
+      )}
+
       <MaterialLinks />
 
       <section id="trend" className="relative z-10 bg-white/85 backdrop-blur border-t">
@@ -351,44 +487,6 @@ export default function Landing() {
           </div>
         </Modal>
       )}
-
-      {/* Blogg-teaser */}
-      <section className="relative z-10 bg-white/85 backdrop-blur border-t">
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Guider &amp; inspiration</h2>
-            <a href="/blogg" className="text-sm font-semibold text-emerald-700 hover:underline">
-              Se alla artiklar →
-            </a>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <a href="/blogg/marmor-vs-granit-bankskiva" className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-md transition-shadow" style={{ minHeight: 200 }}>
-              <img src="/images/materials/marmor-hero.jpg" alt="Marmor vs granit" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="relative flex flex-col justify-end p-5 h-full text-white" style={{ minHeight: 200 }}>
-                <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full w-fit mb-2">Jämförelse</span>
-                <div className="font-bold text-sm leading-snug">Marmor eller granit bänkskiva?</div>
-              </div>
-            </a>
-            <a href="/blogg/bankskiva-underhall-impregnering" className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-md transition-shadow" style={{ minHeight: 200 }}>
-              <img src="/images/materials/kalksten-hero.jpg" alt="Underhåll bänkskiva" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="relative flex flex-col justify-end p-5 h-full text-white" style={{ minHeight: 200 }}>
-                <span className="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full w-fit mb-2">Skötsel</span>
-                <div className="font-bold text-sm leading-snug">Underhåll och impregnering</div>
-              </div>
-            </a>
-            <a href="/blogg/svart-bankskiva-kok" className="group relative rounded-2xl overflow-hidden block shadow hover:shadow-md transition-shadow" style={{ minHeight: 200 }}>
-              <img src="/images/materials/granit-hero.jpg" alt="Svart bänkskiva" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="relative flex flex-col justify-end p-5 h-full text-white" style={{ minHeight: 200 }}>
-                <span className="text-xs font-semibold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full w-fit mb-2">Inspiration</span>
-                <div className="font-bold text-sm leading-snug">Svart bänkskiva i kök</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </section>
 
       <SiteFooter />
     </main>

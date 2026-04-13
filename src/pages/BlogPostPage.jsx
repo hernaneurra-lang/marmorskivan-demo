@@ -38,7 +38,20 @@ export default function BlogPostPage() {
   if (post === undefined) {
     return <div className="min-h-[40vh] grid place-items-center text-sm text-gray-500">Laddar…</div>;
   }
-  if (post === null) return <Navigate to="/blogg" replace />;
+  if (post === null) {
+    if (previewToken) {
+      return (
+        <div style={{ minHeight: "40vh", display: "grid", placeItems: "center", textAlign: "center", padding: 40 }}>
+          <div>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Inlägget hittades inte</div>
+            <div style={{ color: "#666", fontSize: 14 }}>Kontrollera att slugen stämmer eller att Railway-deployen är klar.</div>
+          </div>
+        </div>
+      );
+    }
+    return <Navigate to="/blogg" replace />;
+  }
 
   return (
     <>
