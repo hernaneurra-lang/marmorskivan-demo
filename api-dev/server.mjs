@@ -1907,7 +1907,7 @@ app.get("/api/admin/blog/posts", adminAuth, async (_req, res) => {
   if (!HAS_DB) return res.json([]);
   try {
     const { rows } = await query(
-      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, status, updated_at
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, status, title_color, updated_at
        FROM blog_posts ORDER BY week_number ASC`
     );
     res.json(rows);
@@ -1917,7 +1917,7 @@ app.get("/api/admin/blog/posts", adminAuth, async (_req, res) => {
 // Admin: update a blog post
 app.patch("/api/admin/blog/posts/:id", adminAuth, async (req, res) => {
   if (!HAS_DB) return res.json({ ok: true });
-  const { title, meta_description, h1, hero_image, category, read_time, sections, week_number, status } = req.body || {};
+  const { title, meta_description, h1, hero_image, category, read_time, sections, week_number, status, title_color } = req.body || {};
   try {
     await query(
       `UPDATE blog_posts SET
@@ -1930,11 +1930,12 @@ app.patch("/api/admin/blog/posts/:id", adminAuth, async (req, res) => {
         sections = COALESCE($7::jsonb, sections),
         week_number = COALESCE($8, week_number),
         status = COALESCE($9, status),
+        title_color = COALESCE($10, title_color),
         updated_at = NOW()
-       WHERE id = $10`,
+       WHERE id = $11`,
       [title||null, meta_description||null, h1||null, hero_image||null, category||null,
        read_time||null, sections ? JSON.stringify(sections) : null,
-       week_number||null, status||null, req.params.id]
+       week_number||null, status||null, title_color||null, req.params.id]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

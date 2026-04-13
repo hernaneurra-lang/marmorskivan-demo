@@ -128,6 +128,7 @@ export async function migrate() {
     CREATE INDEX IF NOT EXISTS analytics_events_event_idx ON analytics_events(event);
     CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings(booking_date);
     CREATE INDEX IF NOT EXISTS blog_posts_week_idx ON blog_posts(week_number, publish_year);
+    ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT 'white';
   `);
 
   // Safe column additions for existing deployments

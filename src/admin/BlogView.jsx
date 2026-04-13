@@ -143,6 +143,7 @@ function BlogEditModal({ post, onSave, onClose }) {
     title: post.title || "",
     meta_description: post.meta_description || "",
     hero_image: post.hero_image || "",
+    title_color: post.title_color || "white",
     category: post.category || "Guide",
     read_time: post.read_time || "5 min",
     week_number: post.week_number || 1,
@@ -221,6 +222,23 @@ function BlogEditModal({ post, onSave, onClose }) {
 
           <div style={{ gridColumn: "1 / -1" }}>
             <ImageField label="Hero-bild" value={form.hero_image} onChange={v => setField("hero_image", v)} />
+            <div style={{ marginTop: 10 }}>
+              <label style={L}>Textfärg på hero-bild</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {["white", "black"].map(c => (
+                  <button key={c} onClick={() => setField("title_color", c)} style={{
+                    padding: "6px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    border: form.title_color === c ? "2px solid var(--accent)" : "2px solid var(--border)",
+                    background: c === "white" ? "#fff" : "#111",
+                    color: c === "white" ? "#111" : "#fff",
+                    boxShadow: form.title_color === c ? "0 0 0 2px var(--accent)" : "none",
+                  }}>
+                    {c === "white" ? "☀️ Vit text" : "🌑 Svart text"}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>Välj vit text på mörka bilder, svart på ljusa bilder.</p>
+            </div>
           </div>
         </div>
 
