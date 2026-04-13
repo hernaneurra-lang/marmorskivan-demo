@@ -699,6 +699,15 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
               </div>
             )}
 
+            {/* ── AI Visualizer teaser ── */}
+            <div className="mt-4 flex items-center justify-between gap-3 bg-white/70 border border-emerald-100 rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <span className="text-base">✨</span>
+                <span><span className="font-semibold text-emerald-700">Nytt:</span> Välj ett material och rendera det direkt i ditt kök med AI</span>
+              </div>
+              <span className="text-xs text-emerald-600 font-semibold whitespace-nowrap flex-shrink-0">↓ Gå till kalkylator</span>
+            </div>
+
             <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
               <input
                 type="text"
@@ -707,11 +716,11 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
                 placeholder={t("materialsPage.searchPlaceholder", {
                   defaultValue: "Sök… (namn, färg, mönster, finish, tjocklek)",
                 })}
-                className="w-full rounded-xl border px-3 py-2 bg-white"
+                className="w-full rounded-xl border px-3 py-2 bg-white text-gray-900"
               />
 
               <select
-                className="rounded-xl border px-3 py-2 bg-white"
+                className="rounded-xl border px-3 py-2 bg-white text-gray-900"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
@@ -735,7 +744,7 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
                 })}
               </select>
 
-              <div className="rounded-xl border px-3 py-2 bg-white text-sm text-gray-600 flex items-center">
+              <div className="rounded-xl border px-3 py-2 bg-white text-sm text-gray-900 flex items-center">
                 {t("materialsPage.showingRows", {
                   count: filteredRowCount,
                   defaultValue: `Visar ${filteredRowCount} rader`,
@@ -880,15 +889,15 @@ function MaterialGroupCard({ group, imagesMap, onPick, onOpenInfo, currency }) {
       </div>
 
       <div className="p-4 flex-1 flex flex-col gap-2">
-        <div className="text-xs text-gray-500">{categoryLabel}</div>
+        <div className="text-xs text-gray-700">{categoryLabel}</div>
         <h3 className="font-semibold text-gray-900">{baseName}</h3>
 
-        <label className="text-sm">
-          <span className="text-gray-600">
+        <label className="text-sm text-gray-900">
+          <span className="text-gray-900">
             {t("materialsPage.thickness", { defaultValue: "Tjocklek:" })}{" "}
           </span>
           <select
-            className="ml-2 rounded-lg border px-2 py-1 bg-white"
+            className="ml-2 rounded-lg border px-2 py-1 bg-white text-gray-900"
             value={selIdx}
             onChange={(e) => setSelIdx(Number(e.target.value) || 0)}
           >
@@ -912,7 +921,7 @@ function MaterialGroupCard({ group, imagesMap, onPick, onOpenInfo, currency }) {
 
         <div className="mt-auto pt-2 flex gap-2">
           <button
-            className="px-3 py-1.5 rounded-xl border hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-xl border text-gray-900 hover:bg-gray-50"
             onClick={handlePick}
             title={t("materialsPage.chooseTitle", { defaultValue: "Välj material" })}
           >
@@ -920,7 +929,7 @@ function MaterialGroupCard({ group, imagesMap, onPick, onOpenInfo, currency }) {
           </button>
 
           <button
-            className="px-3 py-1.5 rounded-xl border hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-xl border text-gray-900 hover:bg-gray-50"
             onClick={openInfo}
             title={t("materialsPage.moreInfoTitle", { defaultValue: "Mer info" })}
           >
