@@ -699,13 +699,16 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
               </div>
             )}
 
-            {/* ── AI Visualizer teaser ── */}
-            <div className="mt-4 flex items-center justify-between gap-3 bg-white/70 border border-emerald-100 rounded-xl px-4 py-2.5">
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <span className="text-base">✨</span>
-                <span><span className="font-semibold text-emerald-700">Nytt:</span> Välj ett material och rendera det direkt i ditt kök med AI</span>
+            {/* ── AI Visualizer banner ── */}
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-stone-50 border border-stone-200 rounded-xl px-5 py-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center text-lg flex-shrink-0">✨</div>
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">Se vald bänkskiva direkt i ditt kök</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Välj material → gå till kalkylator → ladda upp köksfoto → AI renderar resultatet</div>
+                </div>
               </div>
-              <span className="text-xs text-emerald-600 font-semibold whitespace-nowrap flex-shrink-0">↓ Gå till kalkylator</span>
+              <span className="text-xs font-bold text-emerald-700 whitespace-nowrap flex-shrink-0">Välj material nedan ↓</span>
             </div>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">

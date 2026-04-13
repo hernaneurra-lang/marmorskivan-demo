@@ -420,30 +420,27 @@ function resetFormCompletely() {
     return out;
   }, [openings]);
 
-  const visualizerRef = useRef(null);
-  const scrollToVisualizer = () => {
-    visualizerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <>
-    {/* ── AI Visualizer full-bredd banner ── */}
-    <section className="w-full border-b bg-stone-50">
-      <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="mt-0.5 w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl flex-shrink-0">✨</div>
-          <div>
-            <div className="font-bold text-gray-900 text-base">Se vald bänkskiva direkt i ditt kök</div>
-            <div className="text-sm text-gray-500 mt-0.5">Ladda upp ett foto av ditt kök — AI:n byter ut bänkskivan mot ditt valda material på sekunder</div>
+    {/* ── KitchenVisualizer — full bredd, högst upp ── */}
+    <section className="w-full border-b bg-white">
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        {variant?.name ? (
+          <KitchenVisualizer
+            materialName={variant.name}
+            materialImage={variant.image || null}
+            shape={shape}
+            thicknessMm={thicknessMm}
+          />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-emerald-300 bg-emerald-50 p-6 flex flex-col sm:flex-row items-center gap-5">
+            <div className="text-4xl">🏠</div>
+            <div>
+              <div className="font-semibold text-emerald-800 text-base mb-1">Se vald bänkskiva direkt i ditt kök</div>
+              <div className="text-sm text-emerald-700">Välj ett material i kalkylatorn — sedan kan du ladda upp ett köksfoto och AI:n byter ut bänkskivan mot valt material på sekunder.</div>
+            </div>
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={scrollToVisualizer}
-          className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm shadow hover:bg-emerald-700 active:scale-95 transition-all whitespace-nowrap"
-        >
-          Rendera mitt kök →
-        </button>
+        )}
       </div>
     </section>
     <main className="max-w-6xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -638,23 +635,6 @@ function resetFormCompletely() {
             Visa 2D-ritning
           </button>
         )}
-
-        <div ref={visualizerRef}>
-          {variant?.name ? (
-            <KitchenVisualizer
-              materialName={variant.name}
-              materialImage={variant.image || null}
-              shape={shape}
-              thicknessMm={thicknessMm}
-            />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-emerald-300 bg-emerald-50 p-6 text-center text-sm text-emerald-700">
-              <div className="text-2xl mb-2">🏠</div>
-              <div className="font-semibold mb-1">Välj ett material för att rendera ditt kök</div>
-              <div className="text-emerald-600 text-xs">När du valt material kan du ladda upp ett köksfoto och se resultatet direkt</div>
-            </div>
-          )}
-        </div>
 
         <div className="rounded-2xl border p-6 bg-white shadow-md space-y-6">
           <h2 className="text-lg font-bold border-b pb-3">
