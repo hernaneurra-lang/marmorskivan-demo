@@ -37,23 +37,30 @@ function FeaturedCard({ post }) {
         alt={post.h1}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
-      <div className={`absolute inset-0 ${post.title_color === "black" ? "bg-gradient-to-t from-white/70 via-white/20 to-transparent" : "bg-gradient-to-t from-black/80 via-black/30 to-transparent"}`} />
-      <div className="relative h-full flex flex-col justify-end p-8" style={{ minHeight: 400, color: post.title_color === "black" ? "#111" : "#fff" }}>
-        <div className="flex items-center gap-3 mb-3">
-          <CategoryBadge category={post.category} />
-          <span className="text-xs" style={{ opacity: 0.7 }}>{post.read_time} läsning</span>
-        </div>
-        <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-3 drop-shadow">
-          {post.h1}
-        </h2>
-        <p className="text-sm line-clamp-2 max-w-xl mb-4" style={{ opacity: 0.85 }}>
-          {post.meta_description}
-        </p>
-        <div className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full w-fit transition"
-          style={{ background: post.title_color === "black" ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.2)", color: post.title_color === "black" ? "#111" : "#fff" }}>
-          Läs artikel →
-        </div>
-      </div>
+      {(() => {
+        const tc = post.title_color || "#ffffff";
+        // Determine if text is light or dark to set gradient direction
+        const isLight = ["#ffffff","#cccccc","#999999"].includes(tc);
+        return <>
+          <div className="absolute inset-0" style={{ background: isLight ? "linear-gradient(to top, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.15) 50%, transparent 100%)" : "linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.25) 50%, transparent 100%)" }} />
+          <div className="relative h-full flex flex-col justify-end p-8" style={{ minHeight: 400, color: tc }}>
+            <div className="flex items-center gap-3 mb-3">
+              <CategoryBadge category={post.category} />
+              <span className="text-xs" style={{ color: tc, opacity: 0.75 }}>{post.read_time} läsning</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-3" style={{ color: tc, textShadow: isLight ? "0 1px 3px rgba(255,255,255,0.5)" : "0 1px 4px rgba(0,0,0,0.6)" }}>
+              {post.h1}
+            </h2>
+            <p className="text-sm line-clamp-2 max-w-xl mb-4" style={{ color: tc, opacity: 0.85 }}>
+              {post.meta_description}
+            </p>
+            <div className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full w-fit transition"
+              style={{ background: isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.20)", color: tc }}>
+              Läs artikel →
+            </div>
+          </div>
+        </>;
+      })()}
     </Link>
   );
 }

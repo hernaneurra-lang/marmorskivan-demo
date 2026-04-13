@@ -1858,7 +1858,7 @@ app.get("/api/blog/posts", async (_req, res) => {
   try {
     const { week, year } = isoWeekYear();
     const { rows } = await query(
-      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, updated_at
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, title_color, updated_at
        FROM blog_posts
        WHERE status != 'draft'
          AND (publish_year < $2 OR (publish_year = $2 AND week_number <= $1))
@@ -1875,7 +1875,7 @@ app.get("/api/blog/posts/:slug", async (req, res) => {
   try {
     const { week, year } = isoWeekYear();
     const { rows } = await query(
-      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, updated_at
+      `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, title_color, updated_at
        FROM blog_posts
        WHERE slug = $1 AND status != 'draft'
          AND (publish_year < $3 OR (publish_year = $3 AND week_number <= $2))`,

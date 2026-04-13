@@ -222,22 +222,27 @@ function BlogEditModal({ post, onSave, onClose }) {
 
           <div style={{ gridColumn: "1 / -1" }}>
             <ImageField label="Hero-bild" value={form.hero_image} onChange={v => setField("hero_image", v)} />
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 12 }}>
               <label style={L}>Textfärg på hero-bild</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                {["white", "black"].map(c => (
-                  <button key={c} onClick={() => setField("title_color", c)} style={{
-                    padding: "6px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                    border: form.title_color === c ? "2px solid var(--accent)" : "2px solid var(--border)",
-                    background: c === "white" ? "#fff" : "#111",
-                    color: c === "white" ? "#111" : "#fff",
-                    boxShadow: form.title_color === c ? "0 0 0 2px var(--accent)" : "none",
-                  }}>
-                    {c === "white" ? "☀️ Vit text" : "🌑 Svart text"}
-                  </button>
-                ))}
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {["#ffffff","#cccccc","#999999","#666666","#444444","#222222","#000000"].map((hex, i) => {
+                  const labels = ["Vit","Ljusgrå","Grå","Mörkgrå","Antracit","Nästan svart","Svart"];
+                  const isSelected = (form.title_color || "#ffffff") === hex;
+                  return (
+                    <button key={hex} title={labels[i]} onClick={() => setField("title_color", hex)} style={{
+                      width: 32, height: 32, borderRadius: "50%", cursor: "pointer", flexShrink: 0,
+                      background: hex,
+                      border: isSelected ? "3px solid var(--accent)" : "2px solid var(--border)",
+                      boxShadow: isSelected ? "0 0 0 2px var(--accent)" : "none",
+                      transition: "box-shadow 0.15s",
+                    }} />
+                  );
+                })}
+                <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 8 }}>
+                  Vald: <strong>{form.title_color || "#ffffff"}</strong>
+                </span>
               </div>
-              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>Välj vit text på mörka bilder, svart på ljusa bilder.</p>
+              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>Ljus bild → välj mörkare text. Mörk bild → välj vit text.</p>
             </div>
           </div>
         </div>
