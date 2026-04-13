@@ -406,11 +406,15 @@ export default function BlogView({ headers, apiBase }) {
                       </span>
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
-                      <a href={`/blogg/${post.slug}?preview=marmorskivan-admin`} target="_blank" rel="noreferrer"
-                        style={{ fontSize: 12, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--text)", textDecoration: "none", background: "var(--surface)", cursor: "pointer", whiteSpace: "nowrap" }}
+                      <button
+                        onClick={() => {
+                          const token = localStorage.getItem("adminToken") || "marmorskivan-admin";
+                          window.open(`/blogg/${post.slug}?preview=${encodeURIComponent(token)}`, "_blank");
+                        }}
+                        style={{ fontSize: 12, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer", whiteSpace: "nowrap" }}
                         title="Förhandsgranska utan att publicera">
                         👁 Visa
-                      </a>
+                      </button>
                       <button className="btn-secondary" style={{ fontSize: 12, padding: "4px 10px" }} title="Synka sektioner från blog-posts.json" onClick={() => syncFromJson(post)}>
                         ↻ Synka
                       </button>

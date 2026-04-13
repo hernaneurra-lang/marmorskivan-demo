@@ -526,8 +526,11 @@ export default function KitchenVisualizer({ materialName, materialImage, shape, 
 
         {/* Photo section */}
         <div>
-          <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
             Eget köksfoto <span className="font-normal text-gray-400 normal-case">(valfritt)</span>
+          </p>
+          <p className="text-[11px] text-gray-400 mb-2">
+            Inget foto? Ingen fara — klicka direkt på <span className="font-medium text-gray-500">Generera köksbild</span> så skapar AI:n en rendering av ett slumpmässigt kök med ditt valda material.
           </p>
 
           {kitchenPhoto ? (
