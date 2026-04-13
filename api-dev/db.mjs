@@ -528,9 +528,6 @@ export async function migrate() {
       `INSERT INTO blog_posts (slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,2026,'scheduled')
        ON CONFLICT (slug) DO UPDATE SET
-         title = EXCLUDED.title,
-         h1 = EXCLUDED.h1,
-         hero_image = EXCLUDED.hero_image,
          category = EXCLUDED.category,
          sections = CASE WHEN blog_posts.sections = '[]'::jsonb THEN EXCLUDED.sections ELSE blog_posts.sections END,
          updated_at = NOW()`,
