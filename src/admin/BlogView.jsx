@@ -408,8 +408,7 @@ export default function BlogView({ headers, apiBase }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
                       <button
                         onClick={() => {
-                          const token = localStorage.getItem("adminToken") || "marmorskivan-admin";
-                          window.open(`/blogg/${post.slug}?preview=${encodeURIComponent(token)}`, "_blank");
+                          window.open(`/blogg/${post.slug}?preview=1`, "_blank");
                         }}
                         style={{ fontSize: 12, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer", whiteSpace: "nowrap" }}
                         title="Förhandsgranska utan att publicera">

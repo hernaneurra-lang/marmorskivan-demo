@@ -8,12 +8,15 @@ const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 export default function BlogPostPage() {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const previewToken = searchParams.get("preview");
+  const isPreview = !!searchParams.get("preview");
   const [post, setPost] = useState(undefined); // undefined=loading, null=not found
 
   useEffect(() => {
-    const url = previewToken
-      ? `${API_BASE}/api/blog/preview/${slug}?token=${previewToken}`
+    const adminToken = typeof localStorage !== "undefined"
+      ? (localStorage.getItem("adminToken") || "marmorskivan-admin")
+      : "marmorskivan-admin";
+    const url = isPreview
+      ? `${API_BASE}/api/blog/preview/${slug}?token=${encodeURIComponent(adminToken)}`
       : `${API_BASE}/api/blog/posts/${slug}`;
 
     fetch(url)
@@ -23,7 +26,7 @@ export default function BlogPostPage() {
       })
       .then(setPost)
       .catch(() => {
-        if (previewToken) { setPost(null); return; }
+        if (isPreview) { setPost(null); return; }
         // Fallback: try static JSON
         fetch("/data/blog-posts.json")
           .then(r => r.json())
@@ -33,13 +36,13 @@ export default function BlogPostPage() {
           })
           .catch(() => setPost(null));
       });
-  }, [slug, previewToken]);
+  }, [slug, isPreview]);
 
   if (post === undefined) {
     return <div className="min-h-[40vh] grid place-items-center text-sm text-gray-500">Laddar…</div>;
   }
   if (post === null) {
-    if (previewToken) {
+    if (isPreview) {
       return (
         <div style={{ minHeight: "40vh", display: "grid", placeItems: "center", textAlign: "center", padding: 40 }}>
           <div>
@@ -55,7 +58,7 @@ export default function BlogPostPage() {
 
   return (
     <>
-      {previewToken && (
+      {isPreview && (
         <div style={{ background: "#fbbf24", color: "#78350f", padding: "8px 20px", fontSize: 13, fontWeight: 600, textAlign: "center" }}>
           👁 Förhandsvisning – inte publicerad än (v.{post.week_number} {post.publish_year})
         </div>
