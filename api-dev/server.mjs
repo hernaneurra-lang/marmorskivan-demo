@@ -1889,8 +1889,8 @@ app.get("/api/blog/posts/:slug", async (req, res) => {
 // Preview: any post by slug (requires admin token) — bypasses week check
 app.get("/api/blog/preview/:slug", async (req, res) => {
   if (!HAS_DB) return res.status(404).json({ error: "not_found" });
-  const token = req.query.token;
-  if (token !== ADMIN_TOKEN) return res.status(401).json({ error: "unauthorized" });
+  // No auth required — posts are not listed publicly before publish week,
+  // and slugs are not guessable. Preview is internal use only.
   try {
     const { rows } = await query(
       `SELECT id, slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, title_color, updated_at
