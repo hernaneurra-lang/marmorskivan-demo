@@ -124,6 +124,16 @@ function SectionEditor({ section, index, onChange, onRemove, onMoveUp, onMoveDow
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
               <input className="admin-input" style={{ marginBottom: 0, fontSize: 12 }} placeholder="Sökväg: /images/materials/..." value={img.src || ""} onChange={e => setImage(imgIdx, "src", e.target.value)} />
               <input className="admin-input" style={{ marginBottom: 0, fontSize: 12 }} placeholder="Alt-text (SEO)" value={img.alt || ""} onChange={e => setImage(imgIdx, "alt", e.target.value)} />
+              <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                {["small","medium","full"].map(s => (
+                  <button key={s} onClick={() => setImage(imgIdx, "size", s)}
+                    style={{ fontSize: 11, padding: "2px 8px", borderRadius: 5, border: "1px solid var(--border)", cursor: "pointer",
+                      background: (img.size || "medium") === s ? "var(--accent)" : "var(--surface)",
+                      color: (img.size || "medium") === s ? "#fff" : "var(--text)" }}>
+                    {s === "small" ? "Liten" : s === "medium" ? "Mellan" : "Full bredd"}
+                  </button>
+                ))}
+              </div>
             </div>
             <button onClick={() => removeImage(imgIdx)} style={{ background: "none", border: "1px solid #ef4444", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#ef4444", flexShrink: 0 }}>✕</button>
           </div>

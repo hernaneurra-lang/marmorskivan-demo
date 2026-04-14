@@ -264,7 +264,7 @@ export default function StoneDetailPage({
               <ul className="flex flex-wrap gap-2">
                 {enhancedSections.map((s) => (
                   <li key={s.id}>
-                    <a href={`#${s.id}`} className="text-sm underline">
+                    <a href={`#${s.id}`} className="text-sm text-gray-700 hover:text-gray-900 underline">
                       {s.heading}
                     </a>
                   </li>
@@ -280,18 +280,51 @@ export default function StoneDetailPage({
                   {s.heading}
                 </h2>
                 <div dangerouslySetInnerHTML={{ __html: s.content }} />
-                {s.images && (
-                  <div className="grid md:grid-cols-2 gap-6 mt-6">
-                    {s.images.map((img, j) => (
-                      <img
-                        key={j}
-                        src={resolveAssetUrl(img.src)}
-                        alt={img.alt}
-                        className="rounded-xl"
-                      />
-                    ))}
-                  </div>
-                )}
+                {s.images && s.images.length > 0 && (() => {
+                  // Group consecutive images by size for layout
+                  const groups = [];
+                  s.images.forEach((img) => {
+                    const size = img.size || "medium";
+                    if (size === "full") {
+                      groups.push([img]);
+                    } else if (groups.length && groups[groups.length - 1][0]?.size !== "full" && groups[groups.length - 1].length < 2) {
+                      groups[groups.length - 1].push(img);
+                    } else {
+                      groups.push([img]);
+                    }
+                  });
+                  return (
+                    <div className="mt-6 space-y-4">
+                      {groups.map((group, gi) => {
+                        if (group[0].size === "full") {
+                          return (
+                            <img key={gi} src={resolveAssetUrl(group[0].src)} alt={group[0].alt}
+                              className="rounded-xl w-full" />
+                          );
+                        }
+                        if (group[0].size === "small") {
+                          return (
+                            <div key={gi} className="flex gap-4 flex-wrap">
+                              {group.map((img, j) => (
+                                <img key={j} src={resolveAssetUrl(img.src)} alt={img.alt}
+                                  className="rounded-xl" style={{ width: "min(280px, 100%)" }} />
+                              ))}
+                            </div>
+                          );
+                        }
+                        // medium — 2 per rad
+                        return (
+                          <div key={gi} className={`grid gap-4 ${group.length === 2 ? "md:grid-cols-2" : ""}`}>
+                            {group.map((img, j) => (
+                              <img key={j} src={resolveAssetUrl(img.src)} alt={img.alt}
+                                className="rounded-xl w-full" />
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </section>
             ))}
           </div>
@@ -301,9 +334,9 @@ export default function StoneDetailPage({
               <h2 className="text-xl font-semibold mb-4">{exploreTitle}</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {otherMaterials.map((m) => (
-                  <Link key={m.to} to={m.to} className="border rounded-lg overflow-hidden">
+                  <Link key={m.to} to={m.to} className="border rounded-lg overflow-hidden block">
                     <img src={resolveAssetUrl(m.img)} alt={getMaterialLabel(m.id)} />
-                    <div className="p-2 text-sm font-medium">{getMaterialLabel(m.id)}</div>
+                    <div className="p-2 text-sm font-medium text-gray-900">{getMaterialLabel(m.id)}</div>
                   </Link>
                 ))}
               </div>
@@ -317,12 +350,12 @@ export default function StoneDetailPage({
           {hasPickHandler ? (
             <button
               onClick={onPickMaterial}
-              className="bg-white px-10 py-4 text-xl font-bold rounded-lg shadow"
+              className="bg-white px-10 py-4 text-xl font-bold text-gray-900 rounded-lg shadow"
             >
               {ctaLabel}
             </button>
           ) : (
-            <Link to="/app" className="bg-white px-10 py-4 text-xl font-bold rounded-lg shadow">
+            <Link to="/app" className="bg-white px-10 py-4 text-xl font-bold text-gray-900 rounded-lg shadow">
               {ctaLabel}
             </Link>
           )}
