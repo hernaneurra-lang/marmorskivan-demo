@@ -163,7 +163,14 @@ function StonesTab({ headers, apiBase }) {
         method: "POST", headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        let msg;
+        try { msg = (await res.json()).error; } catch { msg = await res.text(); }
+        if (msg?.includes("unique") && msg?.includes("slug")) {
+          msg = `Slug "${data.slug}" används redan — ändra slug-fältet till något unikt.`;
+        }
+        throw new Error(msg);
+      }
       toast("Produkt skapad", "success", "✅");
       setAdding(false);
       load();
@@ -422,6 +429,32 @@ function toSlug(str) {
     .replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
+const PRODUCT_LABEL_STYLE = { fontSize: 12, fontWeight: 600, color: "var(--text)", opacity: 0.75, display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" };
+
+function ProductField({ label, field, type, multiline, fullWidth, form, setForm }) {
+  return (
+    <div style={{ marginBottom: 14, gridColumn: fullWidth ? "1 / -1" : undefined }}>
+      <label style={PRODUCT_LABEL_STYLE}>{label}</label>
+      {multiline ? (
+        <textarea
+          className="reply-input"
+          style={{ minHeight: 80, marginBottom: 0, width: "100%", boxSizing: "border-box" }}
+          value={form[field]}
+          onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
+        />
+      ) : (
+        <input
+          className="admin-input"
+          style={{ marginBottom: 0 }}
+          type={type || "text"}
+          value={form[field]}
+          onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
+        />
+      )}
+    </div>
+  );
+}
+
 function ProductModal({ product, onSave, onClose }) {
   const isNew = !product;
   const [form, setForm] = useState({
@@ -443,31 +476,7 @@ function ProductModal({ product, onSave, onClose }) {
     sort_order:   product?.sort_order   || 9999,
   });
 
-  const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--text)", opacity: 0.75, display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" };
-
-  function Field({ label, field, type = "text", multiline, fullWidth }) {
-    return (
-      <div style={{ marginBottom: 14, gridColumn: fullWidth ? "1 / -1" : undefined }}>
-        <label style={labelStyle}>{label}</label>
-        {multiline ? (
-          <textarea
-            className="reply-input"
-            style={{ minHeight: 80, marginBottom: 0, width: "100%", boxSizing: "border-box" }}
-            value={form[field]}
-            onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-          />
-        ) : (
-          <input
-            className="admin-input"
-            style={{ marginBottom: 0 }}
-            type={type}
-            value={form[field]}
-            onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-          />
-        )}
-      </div>
-    );
-  }
+  const labelStyle = PRODUCT_LABEL_STYLE;
 
   return (
     <div style={{
@@ -486,25 +495,62 @@ function ProductModal({ product, onSave, onClose }) {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-          <Field label="Namn" field="name" />
-          <Field label="Basnamn" field="base_name" />
+          <ProductField label="Namn" field="name" form={form} setForm={setForm} />
+          <ProductField label="Basnamn" field="base_name" form={form} setForm={setForm} />
+          {/* Slug — auto-genereras men visas alltid så användaren kan redigera vid konflikt */}
+          <div style={{ marginBottom: 14, gridColumn: "1 / -1" }}>
+            <label style={{ ...labelStyle, display: "flex", justifyContent: "space-between" }}>
+              <span>Slug (unik ID)</span>
+              {isNew && (
+                <span
+                  style={{ fontSize: 11, fontWeight: 400, cursor: "pointer", color: "var(--accent, #059669)", textTransform: "none" }}
+                  onClick={() => setForm(f => ({ ...f, slug: `${toSlug(f.name || "produkt")}__${f.thickness_mm || 20}` }))}
+                >↺ Auto-generera</span>
+              )}
+            </label>
+            <input
+              className="admin-input"
+              style={{ marginBottom: 0, fontFamily: "monospace", fontSize: 13 }}
+              value={form.slug || `${toSlug(form.name || "produkt")}__${form.thickness_mm || 20}`}
+              onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
+              placeholder="auto-genereras från namn + tjocklek"
+            />
+          </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Kategori</label>
-            <input
-              className="admin-input" style={{ marginBottom: 0 }}
-              value={form.category}
-              list="cat-list"
-              onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-            />
-            <datalist id="cat-list">
-              {["marmor","granit","kvartsit","kvarts/komposit","keramik","porslin","kalksten","travertin","onyx","terrazzo","soapstone","dolomite"].map(c => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+            {(() => {
+              const CATS = ["marmor","granit","kvartsit","kvarts/komposit","keramik","porslin","kalksten","travertin","onyx","terrazzo","soapstone","dolomite"];
+              const isCustom = form.category && !CATS.includes(form.category);
+              return (
+                <>
+                  <select
+                    className="admin-input" style={{ marginBottom: isCustom ? 6 : 0 }}
+                    value={isCustom ? "__custom__" : (form.category || "")}
+                    onChange={e => {
+                      if (e.target.value === "__custom__") setForm(f => ({ ...f, category: "" }));
+                      else setForm(f => ({ ...f, category: e.target.value }));
+                    }}
+                  >
+                    <option value="">— Välj kategori —</option>
+                    {CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value="__custom__">Annan (skriv eget)…</option>
+                  </select>
+                  {isCustom && (
+                    <input
+                      className="admin-input" style={{ marginBottom: 0 }}
+                      value={form.category}
+                      autoFocus
+                      placeholder="Skriv kategorinamn"
+                      onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    />
+                  )}
+                </>
+              );
+            })()}
           </div>
-          <Field label="Tjocklek (mm)" field="thickness_mm" type="number" />
-          <Field label="Pris (kr/m²)" field="price" type="number" />
-          <Field label="Kantpris (kr/lm)" field="edge_price" type="number" />
+          <ProductField label="Tjocklek (mm)" field="thickness_mm" type="number" form={form} setForm={setForm} />
+          <ProductField label="Pris (kr/m²)" field="price" type="number" form={form} setForm={setForm} />
+          <ProductField label="Kantpris (kr/lm)" field="edge_price" type="number" form={form} setForm={setForm} />
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Status</label>
             <select
@@ -517,17 +563,17 @@ function ProductModal({ product, onSave, onClose }) {
               ))}
             </select>
           </div>
-          <Field label="Sorteringsordning" field="sort_order" type="number" />
+          <ProductField label="Sorteringsordning" field="sort_order" type="number" form={form} setForm={setForm} />
           <div style={{ gridColumn: "1 / -1" }}>
             <ImageUploader
               value={form.image}
               onChange={v => setForm(f => ({ ...f, image: v }))}
             />
           </div>
-          <Field label="Beskrivning" field="description" multiline fullWidth />
-          <Field label="Fördelar" field="pros" multiline fullWidth />
-          <Field label="Skötsel" field="care" multiline fullWidth />
-          <Field label="Leverantör" field="supplier" fullWidth />
+          <ProductField label="Beskrivning" field="description" multiline fullWidth form={form} setForm={setForm} />
+          <ProductField label="Fördelar" field="pros" multiline fullWidth form={form} setForm={setForm} />
+          <ProductField label="Skötsel" field="care" multiline fullWidth form={form} setForm={setForm} />
+          <ProductField label="Leverantör" field="supplier" fullWidth form={form} setForm={setForm} />
         </div>
 
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
@@ -550,8 +596,8 @@ function ProductModal({ product, onSave, onClose }) {
                 cleaned[f] = null;
               }
             }
-            // Auto-generate slug for new products
-            if (isNew && !cleaned.slug) {
+            // Ensure slug — fall back to auto-generate if field is empty
+            if (!cleaned.slug) {
               cleaned.slug = `${toSlug(cleaned.name || "produkt")}__${cleaned.thickness_mm || 20}`;
             }
             onSave(cleaned);
