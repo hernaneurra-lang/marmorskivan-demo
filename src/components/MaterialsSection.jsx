@@ -87,7 +87,7 @@ function useImagesMap() {
     (async () => {
       try {
         const base = import.meta.env.BASE_URL || "/";
-        const res = await fetch(`${base}data/images-map.json`, { cache: "no-store" });
+        const res = await fetch(`${base}data/imageMap.json`, { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
           if (alive) setMap(json || {});
@@ -141,10 +141,14 @@ function buildImageCandidates(m, imagesMap) {
   // 0) explicit från CSV (om kolumn image finns)
   if (m.image) list.push(normalizeImgPath(m.image));
 
-  // 1) images-map.json lookups
+  // 1) imageMap.json lookups (keys use underscores in the file)
   const nSlug = slug(n);
+  const nUnder = nSlug.replace(/-/g, "_");
   const t = String(m.thickness_mm || "").replace(/[^0-9]/g, "");
-  const mapKeys = [`${nSlug}-${t}`, `${nSlug}_${t}`, nSlug, n, n.replace(/\s+/g, "_")];
+  const mapKeys = [
+    `${nSlug}-${t}`, `${nSlug}_${t}`, `${nUnder}_${t}`,
+    nSlug, nUnder, n, n.replace(/\s+/g, "_"),
+  ];
   if (imagesMap) {
     for (const k of mapKeys) {
       if (imagesMap[k]) list.push(normalizeImgPath(imagesMap[k]));

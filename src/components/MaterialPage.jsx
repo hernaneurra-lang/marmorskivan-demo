@@ -195,7 +195,8 @@ function useImagesMap() {
     (async () => {
       try {
         const base = import.meta.env.BASE_URL || "/";
-        const res = await fetch(`${base}data/images-map.json`, { cache: "no-store" });
+        // Correct filename: imageMap.json (not images-map.json)
+        const res = await fetch(`${base}data/imageMap.json`, { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
           if (alive) setMap(json || {});
@@ -369,26 +370,40 @@ function parseCSV(text = "") {
 /* ===== Image candidates for base name ===== */
 const IMG_EXTS = ["jpg", "jpeg", "JPG", "JPEG", "png", "PNG", "gif", "GIF"];
 
-function buildImageCandidatesForBase(baseName, imagesMap) {
-  const list = [];
-  const key = slug(baseName);
-  if (imagesMap && imagesMap[key]) list.push(imagesMap[key]);
+function imagesMapLookup(imagesMap, key) {
+  if (!imagesMap) return null;
+  // Try hyphen key, then underscore key (imageMap.json uses underscores)
+  return imagesMap[key] || imagesMap[key.replace(/-/g, "_")] || null;
+}
 
+function buildImageCandidatesForBase(baseName, imagesMap, explicitImage) {
+  const list = [];
+
+  // 0) Explicit image path from DB/CSV — highest priority
+  if (explicitImage) list.push(explicitImage);
+
+  // 1) imageMap lookup (tries hyphen + underscore keys)
+  const key = slug(baseName);
+  const mapped = imagesMapLookup(imagesMap, key);
+  if (mapped) list.push(mapped);
+
+  // 2) Name-based guesses with all extensions
   const name1 = baseName.replace(/\s+/g, "_");
   const name2 = baseName
     .replace(/\s+/g, "_")
     .replace(/[^A-Za-z0-9_]+/g, "_")
     .replace(/_+/g, "_")
     .replace(/^_+|_+$/g, "");
-  const name3 = slug(baseName);
+  const name3 = slug(baseName);         // lowercase-hyphen
+  const name4 = name3.replace(/-/g, "_"); // lowercase-underscore
 
-  for (const base of [name1, name2, name3]) {
+  for (const base of [name1, name2, name3, name4]) {
     for (const ext of IMG_EXTS) {
       list.push(`/materials/${base}.${ext}`);
     }
   }
 
-  return list.filter(Boolean);
+  return [...new Set(list.filter(Boolean))];
 }
 
 /* ===== Normalize CSV row ===== */
@@ -795,7 +810,10 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
             <div>
               <div className="aspect-[4/3] rounded-xl overflow-hidden border">
                 <ImageWithFallback
-                  candidates={buildImageCandidatesForBase(infoGroup.baseName, imagesMap)}
+                  candidates={buildImageCandidatesForBase(
+                    infoGroup.baseName, imagesMap,
+                    infoGroup.items?.find(it => it.image)?.image
+                  )}
                   alt={infoGroup.baseName}
                   className="w-full h-full object-cover"
                 />
@@ -858,7 +876,8 @@ function MaterialGroupCard({ group, imagesMap, onPick, onOpenInfo, currency }) {
   }, [preferredIdx]);
 
   const sel = items[selIdx] || items[0] || {};
-  const candidates = buildImageCandidatesForBase(baseName, imagesMap);
+  const explicitImage = items.find(it => it.image)?.image;
+  const candidates = buildImageCandidatesForBase(baseName, imagesMap, explicitImage);
 
   const price = Number(sel.price) || 0;
 
