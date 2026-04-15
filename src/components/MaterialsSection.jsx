@@ -171,7 +171,7 @@ function buildImageCandidates(m, imagesMap) {
     `${nSlug}-12`,
   ]);
 
-  const exts = ["jpg"];
+  const exts = ["jpg", "jpeg", "JPG", "JPEG", "png", "PNG", "gif", "GIF"];
   for (const base of baseNames) {
     for (const ext of exts) {
       list.push(`/materials/${base}.${ext}`);
@@ -181,7 +181,7 @@ function buildImageCandidates(m, imagesMap) {
 
   // 3) fallback /products/
   for (const base of [nSlug, n.replace(/\s+/g, "_"), n]) {
-    for (const ext of exts) list.push(`/products/${base}.${ext}`);
+    for (const ext of ["jpg", "jpeg", "JPG", "JPEG"]) list.push(`/products/${base}.${ext}`);
   }
 
   return unique(list.filter(Boolean));

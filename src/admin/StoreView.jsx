@@ -270,10 +270,25 @@ function StonesTab({ headers, apiBase }) {
             {products.map(p => (
               <tr key={p.id} style={{ borderBottom: "1px solid var(--border)" }}>
                 <td style={{ padding: "4px 8px" }}>
-                  {p.image
-                    ? <img src={p.image} alt="" style={{ width: 40, height: 32, objectFit: "cover", borderRadius: 4 }} />
-                    : <div style={{ width: 40, height: 32, background: "var(--border)", borderRadius: 4 }} />
-                  }
+                  {p.image ? (
+                    <div style={{ position: "relative", width: 40, height: 32 }}>
+                      <img
+                        src={p.image} alt=""
+                        style={{ width: 40, height: 32, objectFit: "cover", borderRadius: 4 }}
+                        onError={e => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.nextSibling.style.display = "flex";
+                        }}
+                      />
+                      <div style={{ display: "none", position: "absolute", inset: 0, background: "#fef2f2", borderRadius: 4, alignItems: "center", justifyContent: "center", fontSize: 10, color: "#dc2626", border: "1px solid #fca5a5" }}>
+                        404
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ width: 40, height: 32, background: "var(--border)", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "var(--muted)" }}>
+                      saknas
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: "4px 8px", color: "var(--text)", maxWidth: 200 }}>
                   <div style={{ fontWeight: 500 }}>{p.name}</div>

@@ -367,23 +367,26 @@ function parseCSV(text = "") {
 }
 
 /* ===== Image candidates for base name ===== */
+const IMG_EXTS = ["jpg", "jpeg", "JPG", "JPEG", "png", "PNG", "gif", "GIF"];
+
 function buildImageCandidatesForBase(baseName, imagesMap) {
   const list = [];
   const key = slug(baseName);
   if (imagesMap && imagesMap[key]) list.push(imagesMap[key]);
 
-  const exts = ["jpg"];
   const name1 = baseName.replace(/\s+/g, "_");
-  exts.forEach((ext) => list.push(`/materials/${name1}.${ext}`));
-
   const name2 = baseName
     .replace(/\s+/g, "_")
     .replace(/[^A-Za-z0-9_]+/g, "_")
     .replace(/_+/g, "_")
     .replace(/^_+|_+$/g, "");
-  exts.forEach((ext) => list.push(`/materials/${name2}.${ext}`));
+  const name3 = slug(baseName);
 
-  exts.forEach((ext) => list.push(`/materials/${slug(baseName)}.${ext}`));
+  for (const base of [name1, name2, name3]) {
+    for (const ext of IMG_EXTS) {
+      list.push(`/materials/${base}.${ext}`);
+    }
+  }
 
   return list.filter(Boolean);
 }
@@ -510,7 +513,7 @@ function Modal({ open, onClose, children, labelledBy }) {
               {t("materialsPage.modalTitle", { defaultValue: "Mer info" })}
             </h3>
             <button
-              className="rounded-xl border px-3 py-1.5 hover:bg-gray-50"
+              className="rounded-xl border px-3 py-1.5 text-gray-700 hover:bg-gray-50"
               onClick={onClose}
               aria-label={t("materialsPage.closeAria", { defaultValue: "Stäng" })}
             >
