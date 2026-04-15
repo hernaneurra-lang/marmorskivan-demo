@@ -1,6 +1,6 @@
 # Whitepaper — Marmorskivan AI-plattform
 
-**Version**: 3.0 — April 2026
+**Version**: 3.1 — April 2026
 
 ---
 
@@ -29,8 +29,10 @@ Marmorskivan-plattformen är en fullstack digital försäljningskanal för natur
             ├── /api/ai-render                 — gpt-image-1 inpaint + DALL·E 3
             ├── /api/contact                   — kontaktformulär
             ├── /api/analytics                 — event-insamling (beacon)
+            ├── /api/materials                 — publikt materialregister (ingen auth)
             ├── /api/admin/analytics           — aggregerad analytics
             ├── /api/admin/analytics/drilldown — rad-för-rad detaljer per KPI
+            ├── /api/admin/products            — CRUD materialregister (admin)
             └── PostgreSQL (Railway managed)
 ```
 
@@ -209,6 +211,12 @@ git push origin main
 
 ---
 
+## Materialregister — live utan rebuild
+
+Från och med version 3.1 hämtar frontend materialdata direkt från Railway-API:t (`GET /api/materials`) i stället för den statiska `materials.csv`. Ändringar i admin-panelen (pris, beskrivning, status, nya material) slår igenom på hemsidan direkt utan ny build eller FTP-deploy. CSV:n kvarstår som fallback om API:t är otillgängligt.
+
+---
+
 ## Skalbarhet
 
 - **Frontend**: Statisk SPA → CDN-ready, ingen serverbelastning
@@ -217,3 +225,4 @@ git push origin main
 - **Analytics**: Beacon-baserat, tappar aldrig UI-performance
 - **Geo**: IP-lookup cachas 1h i minnet per IP
 - **Drill-down**: Max 200 rader per query, index på `event` + `created_at`
+- **Materialregister**: API-first med CSV-fallback — inga byggen krävs för innehållsändringar

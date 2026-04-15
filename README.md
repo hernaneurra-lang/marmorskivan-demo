@@ -32,6 +32,7 @@ En produktionsklar demo som visar hur en modern naturstenshandlare kan sälja oc
 | Kontakter | Inlämnade kontaktförfrågningar |
 | Analytics | Geo, peak hour, tid på sida, AI-insikter, klickbara KPI-kort med drill-down |
 | **Produkter** | SVG donut-grafer, top material, top diskho/kran/häll, konvertering % |
+| **Material (Butik)** | Lägg till / redigera stenar och tillval — syns direkt på sidan utan rebuild |
 | Rapporter | CSV-export |
 | Kunskapsbas | FAQ som AI:n använder |
 | Bokningar | Inkomna bokningar |
@@ -105,9 +106,13 @@ SMTP_SECURE         # "true" för port 465
 COMPANY_EMAIL       # mottagare för alerts
 ```
 
+## Materialregister utan rebuild
+
+Från och med april 2026 hämtar hemsidan material direkt från Railway-databasen via `GET /api/materials`. Lägg till eller redigera stenar i admin → syns direkt. Ingen ny build eller FTP-deploy krävs för innehållsändringar.
+
 ## DB-schema
 
-Tabeller: `chat_sessions`, `chat_messages`, `analytics_events`, `contacts`, `site_settings`, `canned_responses`, `knowledge_base`
+Tabeller: `chat_sessions`, `chat_messages`, `analytics_events`, `contacts`, `site_settings`, `canned_responses`, `knowledge_base`, `products`, `catalog_accessories`
 
 Migrationer körs automatiskt vid serverstart (`migrate()` i `db.mjs`).
 

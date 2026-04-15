@@ -118,8 +118,22 @@ KPI-typer: `pageviews`, `sessions`, `chats`, `calculator`, `offers`, `contacts`,
 - Lagras på varje `analytics_events`-rad: `country`, `city`
 - Lagras på `chat_sessions`: `country`, `country_code`, `city`, `region`
 
+## Materialdata — databas som källa (fr.o.m. 2026-04)
+
+Frontend hämtar material från Railway-API:t i första hand, statisk CSV som fallback:
+- `GET /api/materials` — publikt endpoint, returnerar alla produkter där `status != 'hidden'`
+- `App.jsx` och `MaterialsSection.jsx` försöker API:t, faller tillbaka på `/data/materials.csv`
+- **Lägg till / redigera material i admin → syns direkt på sidan utan ny build**
+- Fältmappning: DB `edge_price` → frontend `edgePrice`, DB `base_name` → används av `computeBaseKey`
+
+### StoreView — produktmodal (admin)
+- `ProductField` är definierad **utanför** `ProductModal` — annars tappar fält fokus vid varje knapptryckning (React remount-bugg)
+- Kategori-fält: `<select>` med presets + "Annan (skriv eget)…" som visar textfält
+- Slug-fält: alltid synligt, auto-genereras som `{toSlug(name)}__{thickness_mm}`, redigerbart vid konflikt
+- Slug måste vara unik i DB (`UNIQUE NOT NULL`) — felmeddelande visas på svenska vid kollision
+
 ## DB-schema (PostgreSQL via Railway)
-Tabeller: `chat_sessions`, `chat_messages`, `analytics_events`, `contacts`, `site_settings`, `canned_responses`, `knowledge_base`
+Tabeller: `chat_sessions`, `chat_messages`, `analytics_events`, `contacts`, `site_settings`, `canned_responses`, `knowledge_base`, `products`, `catalog_accessories`
 
 Migrationer körs automatiskt vid serverstart (`migrate()` i `db.mjs`).
 
@@ -128,3 +142,5 @@ Migrationer körs automatiskt vid serverstart (`migrate()` i `db.mjs`).
 - **ip-api.com** använder HTTP — ok server-side, aldrig klient-side
 - **Canvas vs img**: `max-h-full` fungerar inte reliabelt på `<canvas>` — beräkna CSS-storlek explicit: `Math.min(innerWidth/w, (innerHeight-64)/h)`
 - `VITE_CHAT_API_BASE` i `.env` pekar på Railway-URL för lokal utveckling
+- **Vite `base: "/"`** måste vara satt — annars laddas assets med relativ sökväg och sidan blir vit vid direktnavigering (t.ex. `/app/` på refresh)
+- **Komponenter definierade inuti andra komponenter** förstörs och återskapas vid varje render → React avmonterar dem → fokus försvinner. Definiera alltid hjälpkomponenter på toppnivå.
