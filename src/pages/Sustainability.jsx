@@ -35,8 +35,8 @@ export default function SustainabilityPage() {
       toc={toc}
       breadcrumbLabel={t("sustainability.breadcrumb", { defaultValue: "Hållbarhet" })}
     >
-      <div className="max-w-4xl">
-        <section id="intro" className="space-y-6 text-gray-800 leading-relaxed scroll-mt-24">
+      <div className="max-w-4xl text-gray-900">
+        <section id="intro" className="space-y-6 text-gray-900 leading-relaxed scroll-mt-24">
           <p>
             {t("sustainability.intro.p1", {
               defaultValue:

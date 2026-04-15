@@ -506,6 +506,54 @@ export async function migrate() {
     { slug: "onyx-honey-green",                h1: "Onyx – genomlyst lyx i kök och badrum",                 title: "Onyx bänkskiva | Marmorskivan.se",                           category: "Material",    hero_image: "/images/materials/Onyx/Onxy Smeraldo luxury autonova kitchen.jpg", week: 50 },
     { slug: "atervunnet-glas-bankskiva",       h1: "Återvunnet glas bänkskiva – det hållbaraste alternativet", title: "Återvunnet glas bänkskiva | Marmorskivan.se",            category: "Material",    hero_image: "/images/materials/Återvunnet Glas/recycled glass countertop kitchen like brand magna from germany.jpg", week: 51 },
     { slug: "keramik-bankskiva-guide",         h1: "Keramik (Dekton/Lapitec) – ultra-tåligt och modernt",  title: "Keramik bänkskiva guide | Marmorskivan.se",                  category: "Material",    hero_image: "/images/materials/Terrazzo/A modern kitchen with sleek, minimalist cabinetry and countertops made of polished Perlato terrazzo, featuring subtle veining and a warm, neutral color palette. The lighting is bright and even, highlighting the lux.jpg", week: 52 },
+    // Extra post: slab max length & seam placement
+    {
+      slug: "bankskiva-maxlangd-och-skarvar",
+      title: "Bänkskivans maxlängd och skarvar – guide till osynlig sammanfogning | Marmorskivan.se",
+      meta_description: "Hur lång kan en stenbänkskiva vara utan skarv? Guide till maxlängder per material och var du placerar skarven så den blir näst intill osynlig – vid diskho, spishäll och håluttag.",
+      h1: "Bänkskivans maxlängd och skarvar – guide till osynlig sammanfogning",
+      hero_image: "/images/materials/Marmor/marmor-kitchen.jpg",
+      category: "Guide",
+      read_time: "6 min",
+      week: 16,
+      sections: [
+        {
+          heading: "Hur stor är en råplatta – och vad begränsar längden?",
+          content: `<p>En naturstenbänkskiva börjar sitt liv som en råplatta – en <em>slab</em> – som bryts ur berget i ett stenbryteri och sedan sågas till lämplig tjocklek. Plattans storlek bestämmer direkt hur lång din bänkskiva kan bli utan skarv.</p><p>Råplattor är organiska produkter. Storlek, form och kvalitet varierar beroende på bergart, bryteri och land. Det finns inga globalt standardiserade plattmått, men industrin har etablerat riktlinjer:</p><ul><li><strong>Granit:</strong> 270–335 cm längd × 150–200 cm bredd – en av de mest generösa bergarterna</li><li><strong>Kvartsit:</strong> 300–350 cm längd × 165–200 cm bredd – de allra största naturstensplattorna</li><li><strong>Marmor:</strong> 255–305 cm längd × 140–190 cm bredd – mer spröd, kräver oftare skarv</li><li><strong>Kvarts/komposit:</strong> 305–320 cm längd × 140–165 cm bredd – fabriksgjord, konsekvent storlek</li><li><strong>Keramik/sintrad sten:</strong> 320 cm och längre – kan ofta levereras utan skarv i standard kök</li></ul><p>Utöver råplattans storlek spelar transport en roll. En 3,4 meter lång sten väger hundratals kilo – trapphus, hissar och smala entréer sätter ibland sina egna gränser.</p>`,
+          images: [{ src: "/images/materials/Kvartsit/big quartzite quarry big machinery.jpg", alt: "Kvartsitplattor i fabrik – stora råplattor med varierande mått" }]
+        },
+        {
+          heading: "Maxlängd per material – tumregler",
+          content: `<p>Hos flertalet svenska stenhuggare levereras bänkskivor utan skarv upp till dessa längder:</p><ul><li><strong>Granit:</strong> upp till ca 290–330 cm utan skarv</li><li><strong>Kvartsit:</strong> upp till ca 300–340 cm – störst variation, beroende på ursprungsbrytteri</li><li><strong>Marmor:</strong> ca 250–300 cm – mer spröd och tyngre att hantera, kräver oftare delning</li><li><strong>Kvarts/komposit:</strong> exakt 300 cm (standardplatta) – vill du ha längre köket behöver du skarv</li><li><strong>Keramik/sintrad sten:</strong> 320 cm och mer möjligt – stor fördel för långa kökslinjer</li></ul><p>Har du ett kök som överstiger 300 cm på en rät sträcka är en skarv i de flesta fall oundviklig – oavsett material. Frågan är inte <em>om</em> du får en skarv, utan <em>var</em> den hamnar.</p>`
+        },
+        {
+          heading: "Regel nr 1: Placera skarven vid håluttaget",
+          content: `<p>Det finaste rådet en erfaren stenhuggare kan ge dig är detta:</p><blockquote><strong>Lägg skarven vid håluttaget – diskho, spishäll eller blandarhål. Där blir den näst intill osynlig.</strong></blockquote><p>Anledningen är enkel. Håluttaget är ett redan befintligt avbrott i stenytan. Ögat förväntar sig att stenen slutar vid diskho-kanten – det registrerar aldrig att det faktiskt är en skarv. Hällen eller hoens ram täcker fogen och gör den bokstavligt talat osynlig uppifrån.</p><p>Det svenska stenföretaget Stenskivor.se sammanfattar det så här: <em>"Vid installationen försöker man lägga delningen intill spishällen för att synligheten ska minimeras."</em> Samma princip gäller diskho och blandarhål.</p>`,
+          images: [{ src: "/images/materials/Granit/granit-kitchen.jpg.jpg", alt: "Diskho i granitbänkskiva – idealt ställe för skarv" }]
+        },
+        {
+          heading: "Varför håluttaget fungerar perfekt som skarv-plats",
+          content: `<p>Det finns tre anledningar till att håluttaget är den bästa platsen:</p><ol><li><strong>Naturligt visuellt avbrott.</strong> Diskho, häll och blandare bryter redan av stenytan. Ögat söker inte skarvar vid dessa punkter – de tillhör kökets normala utseende.</li><li><strong>Apparaten täcker fogen.</strong> En underliggande diskho (undermount) eller en inbyggd spishäll döljer skarven längs hela sin kant. Det som syns – om ens det – är en millimetertunna linje under blandarhållets krom.</li><li><strong>Strukturellt smart.</strong> Stenen på ömse sidor om ett håluttag är kortare och lättare. Skarven hamnar naturligt vid en bärande skåpkant under bänken, vilket ger stadigt stöd.</li></ol><p>En viktig detalj: placera skarven <em>längs kanten av</em> håluttaget, inte tvärs igenom mitten. Stenhuggaren planerar detta vid templating och ser till att skarvkanten sammanfaller med hocutoutens eller hällens yttre rand.</p>`
+        },
+        {
+          heading: "Andra bra placeringar – hörn och L-form",
+          content: `<p>Har du ett L-kök eller U-kök är hörnet ett annat självklart val för skarven. Stenen byter riktning och ögat uppfattar hörnet som en naturlig gräns – precis som med ett håluttag.</p><p>Tumregler för hörn-skarvar:</p><ul><li>Placera aldrig skarven <em>i</em> ett inre hörn (90°-punkten). Det är en spänningspunkt – fogmassan kan spricka med tiden.</li><li>Förflytta skarven minst 15 cm längs en av armarna, bort från hörnet. Då hamnar den över en stabil skåpkant och risken för rörelseskador minimeras.</li><li>Vid L-form med lång väggarm och korthäll kan skarvpunkten kombineras med spishällens håluttag – dubbel fördel.</li></ul>`,
+          images: [{ src: "/images/materials/Marmor/marmor-kitchen.jpg", alt: "L-kök med naturstenbänkskiva – skarven vid hörnet" }]
+        },
+        {
+          heading: "Det här ska du undvika",
+          content: `<p>Lika viktigt som att välja rätt plats är att undvika fel:</p><ul><li><strong>Inte mitt i en fri yta.</strong> En skarv mitt på en öppen bänkyta syns tydligast – speciellt om stenen har stark ådring som bryts av. Ingen täcker fogen och ögat dras dit direkt.</li><li><strong>Inte utan undre stöd.</strong> Skarven måste vila på en skåpkant eller bärande list. En fog som hänger fritt kan sjunka med millimetrar och skapa en synlig kant.</li><li><strong>Inte för nära in i hörnet.</strong> Inre hörn är som sagt spänningspunkter. Gå minst 15 cm ut på armen.</li><li><strong>Inte för nära diskho-kanten om du inte planerat det.</strong> Om skarven hamnar 2–3 cm från hocutoutens kant – utan att täckas av ho-ramen – är det sämsta av båda världar: synlig skarv nära ett vattenutsatt område.</li></ul>`
+        },
+        {
+          heading: "Hur en professionell skarv görs",
+          content: `<p>En välgjord skarv är egentligen en hantverk-process i flera steg:</p><ol><li><strong>Exakt kapning.</strong> Båda stenarnas skarv-kanter kapas med en bryggsåg och raka stöd. Målsättningen är en fogbredd på ca 1,5 mm (1/16 tum). Vidare gap syns alltid, oavsett hur väl du matchar färg.</li><li><strong>Armering.</strong> I granit och kvartskomposit fräses spår i undersidan och stålstavar gjuts in med epoxy. I marmor används glasfiberarmering (stål syns igenom den ljusare stenen). Armeringen ger dragstyrka som fogmassa ensam inte klarar.</li><li><strong>Ådernmatchning.</strong> Stenhuggaren lägger ut båda plattorna och roterar dem tills ådrings-mönstret löper så naturligt som möjligt över fogen. Vid dramatiska stenar som Calacatta eller Statuario görs detta extra noggrant.</li><li><strong>Fogning med epoxy.</strong> Epoxi är det professionella valet – polyester gulnar med UV-ljus. Epoxin pigmenteras att matcha stenens grundton och fylls i fogen med ett spatel.</li><li><strong>Polering.</strong> När epoxin härdat slipas fogen jämnt och poleras med de omgivande stenarnas finhet. Rätt utfört syns knappt en linje.</li></ol><p>Gapet under montering är 3–8 mm (enligt Stenskivor.se) för att ge plats för fogmassa. Slutresultatet är alltid tätare.</p>`
+        },
+        {
+          heading: "Vanliga frågor",
+          content: `<p><strong>Kan jag ha en bänkskiva helt utan skarv i ett 320 cm kök?</strong><br/>Det beror på materialet. Kvartsit och granit kan i många fall levereras upp till 330–340 cm som en hel platta. Keramik klarar ofta 320 cm. Fråga din stenhuggare om längsta tillgängliga platta för det aktuella materialet – det varierar per leverantör och ursprungsbrytteri.</p><p><strong>Syns skarven vid diskho?</strong><br/>Vid korrekt placering och utförande är svaret nej – du ser det inte i vardagen. Hocutoutens kant döljer fogen och ögat uppfattar det som ett naturligt avbrott.</p><p><strong>Är en skarv ett tecken på dålig kvalitet?</strong><br/>Nej. Även i exklusiva kök med Calacatta eller Statuario används skarvar. Det är ett geometriskt faktum att naturstensplattor inte är oändligt långa. En professionell skarv är ett kvalitetstecken – inte ett problem.</p><p><strong>Kostar skarven extra?</strong><br/>Vanligtvis ingår arbetet att skapa fogen i offerten, men i vissa fall tillkommer material och arbetstid för armering och ådernmatchning. Fråga om skarvar specificeras i din offert.</p>` + `<div class='not-prose mt-4'><a href='/app' class='inline-flex px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 shadow'>Beräkna pris →</a></div>`
+        }
+      ]
+    },
   ];
 
   // Load existing sections from blog-posts.json if available (first 8 posts)
@@ -523,7 +571,7 @@ export async function migrate() {
   }
 
   for (const p of blogSeed) {
-    const sections = existingSections[p.slug] || [];
+    const sections = p.sections || existingSections[p.slug] || [];
     await db.query(
       `INSERT INTO blog_posts (slug, title, meta_description, h1, hero_image, category, read_time, sections, week_number, publish_year, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,2026,'scheduled')
@@ -531,7 +579,7 @@ export async function migrate() {
          category = EXCLUDED.category,
          sections = CASE WHEN blog_posts.sections = '[]'::jsonb THEN EXCLUDED.sections ELSE blog_posts.sections END,
          updated_at = NOW()`,
-      [p.slug, p.title, "", p.h1, p.hero_image, p.category, "5 min", JSON.stringify(sections), p.week]
+      [p.slug, p.title, p.meta_description || "", p.h1, p.hero_image, p.category, p.read_time || "5 min", JSON.stringify(sections), p.week]
     );
   }
 
