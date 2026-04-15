@@ -11,6 +11,18 @@ const slug = (s = "") =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+function normalizeImgPath(p) {
+  let s = String(p ?? "").trim();
+  if (!s) return "";
+  if (/^(https?:\/\/)/i.test(s) || /^data:/i.test(s)) return s;
+  s = s.replace(/\\/g, "/");
+  if (s.startsWith("./")) s = s.slice(2);
+  if (!s.startsWith("/") && s.toLowerCase().startsWith("materials/")) s = "/" + s;
+  if (!s.startsWith("/") && !s.includes("/")) s = `/materials/${s}`;
+  if (!s.startsWith("/")) s = "/" + s;
+  return s.replace(/\/+/g, "/");
+}
+
 function toNumber(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -60,15 +72,35 @@ export default function MaterialsSection({ onSelect, selectedId }) {
     let alive = true;
     (async () => {
       try {
-        // cache-bust så du aldrig ser gamla priser i dev
+        // 1. Försök API
+        const apiBase = import.meta.env.VITE_CHAT_API_BASE || "";
+        const apiRes = await fetch(`${apiBase}/api/materials`, { cache: "no-store" }).catch(() => null);
+        if (apiRes?.ok) {
+          const data = await apiRes.json();
+          if (alive && Array.isArray(data) && data.length > 0) {
+            setAll(data.map(p => ({
+              ...p,
+              id:           p.slug || String(p.id),
+              name:         p.name || "",
+              category:     p.category || "",
+              thickness_mm: p.thickness_mm ? Number(p.thickness_mm) : "",
+              price:        p.price ? Number(p.price) : "",
+              edgePrice:    p.edge_price ? Number(p.edge_price) : "",
+              image:        normalizeImgPath(p.image),
+            })));
+            return;
+          }
+        }
+
+        // 2. Fallback: CSV
         const bust = `v=${Date.now()}`;
         const res = await fetch(`/data/materials.csv?${bust}`, { cache: "no-store" });
         const text = await res.text();
         const parsed = parseCSV(text);
         if (!alive) return;
-        setAll(Array.isArray(parsed) ? parsed : []);
+        setAll(Array.isArray(parsed) ? parsed.map(p => ({ ...p, image: normalizeImgPath(p.image) })) : []);
       } catch (e) {
-        console.error("materials.csv load error:", e);
+        console.error("materials load error:", e);
       }
     })();
     return () => {
@@ -240,11 +272,12 @@ export default function MaterialsSection({ onSelect, selectedId }) {
               <div className="flex">
                 <div className="w-36 h-28 bg-gray-100 shrink-0 overflow-hidden">
                   <img
-                    src={g.image || v.image || "/products/placeholder.jpg"}
+                    src={normalizeImgPath(g.image || v.image) || "/products/placeholder.jpg"}
                     alt={g.baseName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = "/products/placeholder.jpg";
+                      if (!e.currentTarget.src.includes("placeholder.jpg"))
+                        e.currentTarget.src = "/products/placeholder.jpg";
                     }}
                   />
                 </div>
