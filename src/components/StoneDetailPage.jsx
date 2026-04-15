@@ -297,17 +297,22 @@ export default function StoneDetailPage({
                     <div className="mt-6 space-y-4">
                       {groups.map((group, gi) => {
                         if (group[0].size === "full") {
+                          const img = group[0];
                           return (
-                            <img key={gi} src={resolveAssetUrl(group[0].src)} alt={group[0].alt}
-                              className="rounded-xl w-full" />
+                            <figure key={gi}>
+                              <img src={resolveAssetUrl(img.src)} alt={img.alt} className="rounded-xl w-full" />
+                              {img.alt && <figcaption className="mt-1.5 text-xs text-gray-400 italic text-center">{img.alt}</figcaption>}
+                            </figure>
                           );
                         }
                         if (group[0].size === "small") {
                           return (
                             <div key={gi} className="flex gap-4 flex-wrap">
                               {group.map((img, j) => (
-                                <img key={j} src={resolveAssetUrl(img.src)} alt={img.alt}
-                                  className="rounded-xl" style={{ width: "min(280px, 100%)" }} />
+                                <figure key={j}>
+                                  <img src={resolveAssetUrl(img.src)} alt={img.alt} className="rounded-xl" style={{ width: "min(280px, 100%)" }} />
+                                  {img.alt && <figcaption className="mt-1.5 text-xs text-gray-400 italic text-center">{img.alt}</figcaption>}
+                                </figure>
                               ))}
                             </div>
                           );
@@ -316,8 +321,10 @@ export default function StoneDetailPage({
                         return (
                           <div key={gi} className={`grid gap-4 ${group.length === 2 ? "md:grid-cols-2" : ""}`}>
                             {group.map((img, j) => (
-                              <img key={j} src={resolveAssetUrl(img.src)} alt={img.alt}
-                                className="rounded-xl w-full" />
+                              <figure key={j}>
+                                <img src={resolveAssetUrl(img.src)} alt={img.alt} className="rounded-xl w-full" />
+                                {img.alt && <figcaption className="mt-1.5 text-xs text-gray-400 italic text-center">{img.alt}</figcaption>}
+                              </figure>
                             ))}
                           </div>
                         );
