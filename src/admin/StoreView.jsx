@@ -181,6 +181,20 @@ function StonesTab({ headers, apiBase }) {
 
   return (
     <div>
+      {/* Workflow info */}
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "var(--text)", lineHeight: 1.6 }}>
+        <strong>Så lägger du till en ny sten:</strong>
+        <ol style={{ margin: "6px 0 0 0", paddingLeft: 20 }}>
+          <li>Klicka <strong>+ Lägg till sten</strong> och fyll i namn, kategori, tjocklek och pris.</li>
+          <li>Ladda upp bilden via <strong>FTP (WinSCP)</strong> till mappen <code>/materials/</code> på Loopia.</li>
+          <li>Ange bildvägen i fältet <strong>Bild</strong>, t.ex. <code>/materials/Min_Sten.jpg</code> — matcha filnamnet exakt (skiftlägeskänsligt).</li>
+          <li>Spara — produkten syns på hemsidan <strong>direkt utan ny build</strong>.</li>
+        </ol>
+        <div style={{ marginTop: 8, color: "var(--muted)" }}>
+          ℹ️ CSV-filen behöver <strong>inte</strong> uppdateras för nya produkter — databasen är nu primär källa. Produkter utan bild visas inte på hemsidan.
+        </div>
+      </div>
+
       {/* Filters bar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
         <input
