@@ -98,7 +98,7 @@ function NumberField({ label, value, onChange }) {
   };
 
   return (
-    <label className="text-sm flex flex-col">
+    <label className="text-sm text-gray-900 flex flex-col">
       {label}
       <input
         type="number"

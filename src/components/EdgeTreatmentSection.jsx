@@ -184,7 +184,7 @@ export default function EdgeTreatmentSection({
                 {options.find((o) => o.key === previewKey)?.info ||
                   t("edges.preview.noDesc", { defaultValue: "No description." })}
 
-                <div className="mt-3 text-xs text-gray-500">
+                <div className="mt-3 text-xs text-gray-700">
                   {t("edges.preview.disclaimer", {
                     defaultValue:
                       "Preview is schematic. The exact profile is adapted to the selected stone.",
@@ -210,7 +210,7 @@ export default function EdgeTreatmentSection({
             {t("edges.island.title", { defaultValue: "Island (auto)" })}
           </div>
           <div className="font-medium">{formatMm(islandEdgesMm)}</div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-700">
             {t("edges.island.hint", { defaultValue: "Calculated around the island." })}
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function EdgeTreatmentSection({
             {t("edges.backsplash.title", { defaultValue: "Backsplash (edges)" })}
           </div>
           <div className="font-medium">{formatMm(backsplashEdgesMm)}</div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-700">
             {t("edges.backsplash.hint", { defaultValue: "Summed from backsplash rows." })}
           </div>
         </div>

@@ -33,22 +33,22 @@ export default function SeoBankskivaSten() {
 
               <div class="mt-4 grid sm:grid-cols-4 gap-3">
                 <a href="/app?cat=Marmor" class="rounded-xl border bg-white p-3 hover:shadow-sm transition">
-                  <div class="text-xs text-gray-500">Känsla & ådring</div>
+                  <div class="text-xs text-gray-700">Känsla & ådring</div>
                   <div class="font-semibold text-sm">Marmor</div>
                   <div class="text-xs text-gray-600 mt-1">Välj i appen →</div>
                 </a>
                 <a href="/app?cat=Granit" class="rounded-xl border bg-white p-3 hover:shadow-sm transition">
-                  <div class="text-xs text-gray-500">Max tålighet</div>
+                  <div class="text-xs text-gray-700">Max tålighet</div>
                   <div class="font-semibold text-sm">Granit</div>
                   <div class="text-xs text-gray-600 mt-1">Välj i appen →</div>
                 </a>
                 <a href="/app?cat=Komposit" class="rounded-xl border bg-white p-3 hover:shadow-sm transition">
-                  <div class="text-xs text-gray-500">Jämn design</div>
+                  <div class="text-xs text-gray-700">Jämn design</div>
                   <div class="font-semibold text-sm">Kvarts / komposit</div>
                   <div class="text-xs text-gray-600 mt-1">Välj i appen →</div>
                 </a>
                 <a href="/app?cat=Keramik" class="rounded-xl border bg-white p-3 hover:shadow-sm transition">
-                  <div class="text-xs text-gray-500">Lättskött</div>
+                  <div class="text-xs text-gray-700">Lättskött</div>
                   <div class="font-semibold text-sm">Keramik</div>
                   <div class="text-xs text-gray-600 mt-1">Välj i appen →</div>
                 </a>

@@ -212,7 +212,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
       </div>
 
       {filteredGroups.length === 0 && (
-        <div className="text-sm text-gray-500">Inga material hittades.</div>
+        <div className="text-sm text-gray-700">Inga material hittades.</div>
       )}
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -251,7 +251,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
 
                 <div className="p-3 flex-1">
                   <div className="font-medium">{g.baseName}</div>
-                  <div className="text-xs text-gray-500">{g.category}</div>
+                  <div className="text-xs text-gray-700">{g.category}</div>
 
                   {/* thickness dropdown per GROUP */}
                   <div className="mt-2 flex items-center gap-2 text-sm">
@@ -286,7 +286,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
                       <span className="text-gray-600">Pris lämnas vid förfrågan</span>
                     )}
 
-                    <span className="text-gray-500">
+                    <span className="text-gray-700">
                       {" "}
                       · Kant{" "}
                       {showEdge ? `${formatKr(v.edgePrice)} kr/m` : "pris på förfrågan"}
@@ -298,7 +298,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
                       className={`px-3 py-1.5 rounded-xl border text-sm ${
                         active
                           ? "bg-emerald-600 text-white border-emerald-600"
-                          : "bg-gray-50 hover:bg-gray-100"
+                          : "bg-gray-50 text-gray-900 hover:bg-gray-100"
                       }`}
                       onClick={() => select(v)}
                       title="Välj detta material"
@@ -306,7 +306,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
                       {active ? "Valt" : "Välj"}
                     </button>
                     <button
-                      className="px-3 py-1.5 rounded-xl border text-sm bg-white hover:bg-gray-50"
+                      className="px-3 py-1.5 rounded-xl border text-sm bg-white text-gray-900 hover:bg-gray-50"
                       onClick={() =>
                         setOpenInfo((prev) => ({ ...prev, [baseKey]: !prev[baseKey] }))
                       }
@@ -332,7 +332,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
                     ) : v.pros ? (
                       <p className="text-gray-700">{String(v.pros)}</p>
                     ) : (
-                      <p className="text-gray-500">—</p>
+                      <p className="text-gray-700">—</p>
                     )}
                   </div>
 
@@ -341,7 +341,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
                     {v.care ? (
                       <p className="text-gray-700">{String(v.care)}</p>
                     ) : (
-                      <p className="text-gray-500">—</p>
+                      <p className="text-gray-700">—</p>
                     )}
                   </div>
                 </div>
@@ -351,7 +351,7 @@ export default function MaterialsSection({ onSelect, selectedId }) {
         })}
       </div>
 
-      <p className="text-xs text-gray-500 mt-3">
+      <p className="text-xs text-gray-700 mt-3">
         Tips: Välj tjocklek per material. Klicka på <span className="font-medium">Välj</span> för att använda vald variant i kalkylen.
       </p>
     </div>

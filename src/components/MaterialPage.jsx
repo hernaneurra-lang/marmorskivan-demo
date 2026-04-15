@@ -1,5 +1,5 @@
 // Path: src/components/MaterialPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 /* ===== Helpers ===== */
@@ -217,13 +217,23 @@ function useImagesMap() {
 /* ===== Image with fallback ===== */
 function ImageWithFallback({ candidates = [], alt = "", className = "", onClick }) {
   const [idx, setIdx] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const prevFirstRef = useRef(candidates[0]);
   const src = candidates[idx] || "/products/placeholder.jpg";
 
+  // Only reset when the PRIMARY candidate changes and image hasn't loaded yet.
+  // Prevents async imagesMap load from resetting an already-displayed image.
   useEffect(() => {
-    setIdx(0);
-    setFailed(false);
-  }, [JSON.stringify(candidates)]);
+    const first = candidates[0];
+    if (first !== prevFirstRef.current) {
+      prevFirstRef.current = first;
+      if (!loaded) {
+        setIdx(0);
+        setFailed(false);
+      }
+    }
+  }, [candidates[0]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <img
@@ -240,7 +250,9 @@ function ImageWithFallback({ candidates = [], alt = "", className = "", onClick 
       }}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
+      onLoad={() => setLoaded(true)}
       onError={() => {
+        setLoaded(false);
         if (idx < candidates.length - 1) setIdx(idx + 1);
         else setFailed(true);
       }}
@@ -368,7 +380,6 @@ function parseCSV(text = "") {
 }
 
 /* ===== Image candidates for base name ===== */
-const IMG_EXTS = ["jpg", "jpeg", "JPG", "JPEG", "png", "PNG", "gif", "GIF"];
 
 function imagesMapLookup(imagesMap, key) {
   if (!imagesMap) return null;
@@ -377,33 +388,22 @@ function imagesMapLookup(imagesMap, key) {
 }
 
 function buildImageCandidatesForBase(baseName, imagesMap, explicitImage) {
-  const list = [];
+  // 0) Explicit image from DB/CSV — use ONLY that, no guessing
+  if (explicitImage) return [explicitImage];
 
-  // 0) Explicit image path from DB/CSV — highest priority
-  if (explicitImage) list.push(explicitImage);
-
-  // 1) imageMap lookup (tries hyphen + underscore keys)
+  // 1) imageMap lookup — return immediately on hit
   const key = slug(baseName);
   const mapped = imagesMapLookup(imagesMap, key);
-  if (mapped) list.push(mapped);
+  if (mapped) return [mapped];
 
-  // 2) Name-based guesses with all extensions
-  const name1 = baseName.replace(/\s+/g, "_");
-  const name2 = baseName
-    .replace(/\s+/g, "_")
-    .replace(/[^A-Za-z0-9_]+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  const name3 = slug(baseName);         // lowercase-hyphen
-  const name4 = name3.replace(/-/g, "_"); // lowercase-underscore
+  // 2) Minimal fallback — filerna heter TitleCase_Underscore.jpg på servern
+  const name1 = baseName.replace(/\s+/g, "_");            // TitleCase_Underscore
+  const name2 = slug(baseName).replace(/-/g, "_");        // lowercase_underscore
 
-  for (const base of [name1, name2, name3, name4]) {
-    for (const ext of IMG_EXTS) {
-      list.push(`/materials/${base}.${ext}`);
-    }
-  }
-
-  return [...new Set(list.filter(Boolean))];
+  return [...new Set([
+    `/materials/${name1}.jpg`,
+    `/materials/${name2}.jpg`,
+  ].filter(Boolean))];
 }
 
 /* ===== Normalize CSV row ===== */

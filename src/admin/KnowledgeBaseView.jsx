@@ -50,20 +50,53 @@ export default function KnowledgeBaseView({ headers, apiBase }) {
   const [newContent, setNewContent] = useState("");
   const [addingCanned, setAddingCanned] = useState(false);
 
+  // Quick actions
+  const [quickActions, setQuickActions] = useState([]);
+  const [savingQA, setSavingQA] = useState(false);
+
   const loadKB = useCallback(async () => {
     setLoading(true);
     try {
-      const [kbRes, cannedRes] = await Promise.all([
+      const [kbRes, cannedRes, settingsRes] = await Promise.all([
         fetch(`${apiBase}/api/admin/knowledge-base`, { headers }),
         fetch(`${apiBase}/api/admin/canned-responses`, { headers }),
+        fetch(`${apiBase}/api/admin/settings`, { headers }),
       ]);
-      const [kbData, cannedData] = await Promise.all([kbRes.json(), cannedRes.json()]);
+      const [kbData, cannedData, settings] = await Promise.all([kbRes.json(), cannedRes.json(), settingsRes.json()]);
       setKbItems(kbData.items || []);
       setCanned(cannedData.responses || []);
+      try {
+        const qa = JSON.parse(settings.quick_actions_list || "[]");
+        setQuickActions(qa.length ? qa : [
+          { label: "💰 Priser", message: "Vad kostar en bänkskiva?" },
+          { label: "🪨 Material", message: "Vilket material är bäst för kök?" },
+          { label: "📏 Mätning", message: "Hur fungerar mätningen?" },
+          { label: "🚚 Leverans", message: "Hur lång är leveranstiden?" },
+        ]);
+      } catch { setQuickActions([]); }
     } finally {
       setLoading(false);
     }
   }, [apiBase, JSON.stringify(headers)]);
+
+  const saveQuickActions = async () => {
+    setSavingQA(true);
+    try {
+      const settings = {};
+      settings.quick_actions_list = JSON.stringify(quickActions);
+      await fetch(`${apiBase}/api/admin/settings`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+    } finally {
+      setSavingQA(false);
+    }
+  };
+
+  const addQA = () => setQuickActions((prev) => [...prev, { label: "", message: "" }]);
+  const updateQA = (i, patch) => setQuickActions((prev) => prev.map((a, idx) => idx === i ? { ...a, ...patch } : a));
+  const removeQA = (i) => setQuickActions((prev) => prev.filter((_, idx) => idx !== i));
 
   useEffect(() => { loadKB(); }, [loadKB]);
 
@@ -130,6 +163,9 @@ export default function KnowledgeBaseView({ headers, apiBase }) {
           <button className={`period-btn${tab === "canned" ? " active" : ""}`} onClick={() => setTab("canned")}>
             ⚡ Snabbsvar ({canned.length})
           </button>
+          <button className={`period-btn${tab === "quickactions" ? " active" : ""}`} onClick={() => setTab("quickactions")}>
+            🔘 Snabbfrågor ({quickActions.length})
+          </button>
           <button className="btn-refresh" onClick={loadKB}>↻</button>
         </div>
       </div>
@@ -137,6 +173,64 @@ export default function KnowledgeBaseView({ headers, apiBase }) {
       <div className="admin-content">
         {loading ? (
           <div style={{ color: "var(--muted)" }}>Laddar…</div>
+        ) : tab === "quickactions" ? (
+          <>
+            <div style={{ marginBottom: 12, fontSize: 13, color: "var(--muted)" }}>
+              Snabbfrågorna visas som knappar i chattwidgeten. Kunden klickar på dem för att snabbt ställa en fråga.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              {quickActions.map((qa, i) => (
+                <div key={i} className="admin-card" style={{ display: "flex", gap: 10, alignItems: "center", padding: 12, margin: 0 }}>
+                  <div style={{ flex: "0 0 160px" }}>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Knapptext (emoji + label)</div>
+                    <input
+                      className="admin-input"
+                      value={qa.label}
+                      onChange={(e) => updateQA(i, { label: e.target.value })}
+                      placeholder="💰 Priser"
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Meddelande som skickas</div>
+                    <input
+                      className="admin-input"
+                      value={qa.message}
+                      onChange={(e) => updateQA(i, { message: e.target.value })}
+                      placeholder="Vad kostar en bänkskiva?"
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeQA(i)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--red)", fontSize: 18, padding: "0 4px", flexShrink: 0, marginTop: 16 }}
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={addQA}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "2px dashed var(--border)", background: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, fontWeight: 600 }}
+              >
+                + Lägg till fråga
+              </button>
+              <button
+                className="btn-send"
+                onClick={saveQuickActions}
+                disabled={savingQA}
+              >
+                {savingQA ? "Sparar…" : "💾 Spara snabbfrågor"}
+              </button>
+            </div>
+            <div style={{ marginTop: 16, padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--muted)", border: "1px solid var(--border)" }}>
+              Förhandsgranskning: {quickActions.map((qa) => (
+                <span key={qa.label} style={{ display: "inline-block", margin: "4px 4px 0 0", padding: "3px 10px", borderRadius: 12, border: "1px solid var(--green)", color: "var(--green)", fontSize: 12 }}>
+                  {qa.label || "…"}
+                </span>
+              ))}
+            </div>
+          </>
         ) : tab === "kb" ? (
           <>
             <div style={{ marginBottom: 12, fontSize: 13, color: "var(--muted)" }}>

@@ -108,18 +108,29 @@ function useImagesMap() {
 /* ===== Image with fallback chain ===== */
 function ImageWithFallback({ candidates = [], alt = "", className = "" }) {
   const [idx, setIdx] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const prevFirstRef = useRef(candidates[0]);
   const src = candidates[idx] || "/products/placeholder.jpg";
 
+  // Only reset when the PRIMARY candidate changes and we haven't loaded yet.
+  // This prevents the async imagesMap load from causing a reset when the image
+  // is already displaying correctly.
   useEffect(() => {
-    setIdx(0);
-  }, [JSON.stringify(candidates)]);
+    const first = candidates[0];
+    if (first !== prevFirstRef.current) {
+      prevFirstRef.current = first;
+      if (!loaded) setIdx(0);
+    }
+  }, [candidates[0]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <img
       src={src}
       alt={alt}
       className={className}
+      onLoad={() => setLoaded(true)}
       onError={(e) => {
+        setLoaded(false);
         if (idx < candidates.length - 1) {
           setIdx(idx + 1);
         } else if (!src.includes("placeholder.jpg")) {
@@ -132,63 +143,31 @@ function ImageWithFallback({ candidates = [], alt = "", className = "" }) {
 
 /* ===== Bygg bildkandidater ===== */
 function buildImageCandidates(m, imagesMap) {
-  const list = [];
+  // 0) Explicit bild från DB/CSV — använd bara den, inga gissningar
+  if (m.image) {
+    const path = normalizeImgPath(m.image);
+    if (path) return [path];
+  }
 
-  // Ta bort parenteser med "mm", men behåll resten av namnet
   const rawName = String(m.name || "").trim();
   const n = rawName.replace(/\(\s*\d+\s*mm\)/gi, "").trim();
-
-  // 0) explicit från CSV (om kolumn image finns)
-  if (m.image) list.push(normalizeImgPath(m.image));
-
-  // 1) imageMap.json lookups (keys use underscores in the file)
   const nSlug = slug(n);
   const nUnder = nSlug.replace(/-/g, "_");
   const t = String(m.thickness_mm || "").replace(/[^0-9]/g, "");
-  const mapKeys = [
-    `${nSlug}-${t}`, `${nSlug}_${t}`, `${nUnder}_${t}`,
-    nSlug, nUnder, n, n.replace(/\s+/g, "_"),
-  ];
+
+  // 1) imageMap.json lookup — returnera direkt vid träff
   if (imagesMap) {
+    const mapKeys = [`${nUnder}_${t}`, `${nSlug}_${t}`, nUnder, nSlug];
     for (const k of mapKeys) {
-      if (imagesMap[k]) list.push(normalizeImgPath(imagesMap[k]));
+      if (imagesMap[k]) return [normalizeImgPath(imagesMap[k])];
     }
   }
 
-  // 2) /materials/ mönster
-  const baseNames = unique([
-    n,
-    n.replace(/\s+/g, "_"),
-    n.replace(/\s+/g, "-"),
-    nSlug,
-    `${n}_20mm`,
-    `${n}_30mm`,
-    `${n}_12mm`,
-    `${n.replace(/\s+/g, "_")}_20mm`,
-    `${n.replace(/\s+/g, "_")}_30mm`,
-    `${n.replace(/\s+/g, "_")}_12mm`,
-    `${n.replace(/\s+/g, "-")}-20`,
-    `${n.replace(/\s+/g, "-")}-30`,
-    `${n.replace(/\s+/g, "-")}-12`,
-    `${nSlug}-20`,
-    `${nSlug}-30`,
-    `${nSlug}-12`,
+  // 2) Minimal fallback — bara .jpg (filerna heter TitleCase_Underscore.jpg)
+  return unique([
+    `/materials/${n.replace(/\s+/g, "_")}.jpg`,
+    `/materials/${nUnder}.jpg`,
   ]);
-
-  const exts = ["jpg", "jpeg", "JPG", "JPEG", "png", "PNG", "gif", "GIF"];
-  for (const base of baseNames) {
-    for (const ext of exts) {
-      list.push(`/materials/${base}.${ext}`);
-      list.push(`/materials/${base.toLowerCase()}.${ext}`);
-    }
-  }
-
-  // 3) fallback /products/
-  for (const base of [nSlug, n.replace(/\s+/g, "_"), n]) {
-    for (const ext of ["jpg", "jpeg", "JPG", "JPEG"]) list.push(`/products/${base}.${ext}`);
-  }
-
-  return unique(list.filter(Boolean));
 }
 
 /* ===== CSV parser ===== */

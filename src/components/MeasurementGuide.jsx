@@ -32,7 +32,7 @@ export default function MeasurementGuide({ shape, dims = {}, cutouts = {} }) {
         <button
           type="button"
           onClick={() => setZoom(true)}
-          className="ml-3 px-3 py-1.5 text-sm rounded-lg border bg-gray-50 hover:bg-gray-100"
+          className="ml-3 px-3 py-1.5 text-sm rounded-lg border text-gray-900 bg-gray-50 hover:bg-gray-100"
         >
           {t("measurementGuide.enlarge", { defaultValue: "Enlarge" })}
         </button>

@@ -14,6 +14,11 @@ export default {
   nav: {
     calculator: "Calculator",
     materials: "Materials",
+    book: "Book meeting",
+  },
+
+  footer: {
+    tagline: "Sweden's easiest way to your new worktop",
   },
 
   app: {
