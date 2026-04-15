@@ -1531,6 +1531,17 @@ app.get("/api/admin/export/:type", adminAuth, async (req, res) => {
 // PRODUCTS (stenar) — CRUD
 // ════════════════════════════════════════
 
+// Lazy-load materialsInfo.json for image fallback
+let _materialsInfoCache = null;
+function getMaterialsInfo() {
+  if (_materialsInfoCache) return _materialsInfoCache;
+  try {
+    const p = path.join(__dirname, "../public/data/materialsInfo.json");
+    _materialsInfoCache = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {};
+  } catch { _materialsInfoCache = {}; }
+  return _materialsInfoCache;
+}
+
 // GET /api/materials — public product catalog (no auth required)
 app.get("/api/materials", async (_req, res) => {
   if (!HAS_DB) return res.json([]);
@@ -1542,7 +1553,18 @@ app.get("/api/materials", async (_req, res) => {
        WHERE status != 'hidden'
        ORDER BY featured DESC, sort_order ASC, name ASC`
     );
-    res.json(rows);
+    const info = getMaterialsInfo();
+    // Fill in missing image from materialsInfo.json if DB field is empty
+    // Products still without image after fallback are excluded from public catalog
+    const result = rows
+      .map(r => {
+        if (!r.image && info[r.slug]?.image) {
+          return { ...r, image: info[r.slug].image };
+        }
+        return r;
+      })
+      .filter(r => r.image); // only products with a known image path
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

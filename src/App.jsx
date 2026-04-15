@@ -194,6 +194,29 @@ export default function App() {
       });
     }
 
+    async function loadCsvImageMap() {
+      try {
+        const base = import.meta.env.BASE_URL || "/";
+        const urls = [`${base}data/materials.csv`, "/data/materials.csv"];
+        for (const url of urls) {
+          const res = await fetch(url, { cache: "no-store" });
+          if (res.ok) {
+            const rows = parseMaterialsCsv(await res.text());
+            // slug -> image map from CSV
+            const map = {};
+            for (const r of rows) {
+              if (r.image) {
+                const k = (r.webName || r.name || "").toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+                if (k) map[k] = r.image;
+              }
+            }
+            return map;
+          }
+        }
+      } catch {}
+      return {};
+    }
+
     async function loadMaterials() {
       // 1. Try Railway API first
       try {
@@ -202,25 +225,36 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           if (!cancelled && Array.isArray(data) && data.length > 0) {
-            const rows = data.map(p => ({
-              id:           p.slug || String(p.id),
-              webName:      p.slug || "",
-              name:         p.name || "",
-              base_name:    p.base_name || p.name || "",
-              category:     p.category || "",
-              thickness_mm: parseNumberLoose(p.thickness_mm),
-              price:        parseNumberLoose(p.price),
-              edgePrice:    parseNumberLoose(p.edge_price),
-              discount:     parseNumberLoose(p.discount),
-              status:       p.status || "available",
-              description:  p.description || "",
-              pros:         p.pros || "",
-              care:         p.care || "",
-              supplier:     p.supplier || "",
-              image:        normalizeImgPath(p.image),
-              featured:     p.featured || false,
-              sort_order:   p.sort_order || 9999,
-            }));
+            // Load CSV image map as fallback for products with missing image
+            const csvImages = await loadCsvImageMap();
+
+            const rows = data.map(p => {
+              let img = normalizeImgPath(p.image);
+              if (!img) {
+                // Try CSV image map by slug
+                const k = (p.slug || p.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
+                img = csvImages[k] || "";
+              }
+              return {
+                id:           p.slug || String(p.id),
+                webName:      p.slug || "",
+                name:         p.name || "",
+                base_name:    p.base_name || p.name || "",
+                category:     p.category || "",
+                thickness_mm: parseNumberLoose(p.thickness_mm),
+                price:        parseNumberLoose(p.price),
+                edgePrice:    parseNumberLoose(p.edge_price),
+                discount:     parseNumberLoose(p.discount),
+                status:       p.status || "available",
+                description:  p.description || "",
+                pros:         p.pros || "",
+                care:         p.care || "",
+                supplier:     p.supplier || "",
+                image:        img,
+                featured:     p.featured || false,
+                sort_order:   p.sort_order || 9999,
+              };
+            });
             applyRows(rows);
             return;
           }

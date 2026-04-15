@@ -249,6 +249,19 @@ function StonesTab({ headers, apiBase }) {
         {loading ? "Laddar…" : `${total} produkter totalt — visar ${products.length}`}
       </div>
 
+      {filters.has_image === "no" && !loading && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#dc2626" }}>
+          ⚠️ Dessa produkter saknar bild och visas <strong>inte</strong> på hemsidan. Lägg till en bildsökväg och spara för att aktivera dem.
+        </div>
+      )}
+
+      {!loading && filters.has_image !== "no" && products.filter(p => !p.image).length > 0 && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#92400e", cursor: "pointer" }}
+          onClick={() => applyFilters({ ...filters, has_image: "no" })}>
+          ⚠️ {products.filter(p => !p.image).length} produkter på denna sida saknar bild och syns ej på hemsidan — klicka för att filtrera
+        </div>
+      )}
+
       {/* Table */}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
