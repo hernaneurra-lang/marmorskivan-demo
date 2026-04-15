@@ -7,6 +7,7 @@ export default defineConfig(() => {
   const outDir = process.env.BUILD_OUTDIR || process.env.VITE_OUTDIR || "dist";
 
   return {
+    base: "/",
     plugins: [react()],
 
     resolve: {
