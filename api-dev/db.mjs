@@ -614,6 +614,7 @@ export async function migrate() {
 
   await seedProducts(db);
   await seedAccessories(db);
+  await backfillProductImages(db);
 
   console.log("✅ DB migrated");
 }
@@ -667,6 +668,26 @@ async function seedProducts(db) {
     inserted++;
   }
   console.log(`✅ Seeded ${inserted} products`);
+}
+
+// Fills in image field for products that have empty image, using materialsInfo.json as source
+async function backfillProductImages(db) {
+  const dataPath = path.join(__dirname, "../public/data/materialsInfo.json");
+  if (!fs.existsSync(dataPath)) return;
+
+  const raw = JSON.parse(fs.readFileSync(dataPath, "utf8"));
+  let updated = 0;
+
+  for (const [key, m] of Object.entries(raw)) {
+    if (!m.image) continue;
+    const res = await db.query(
+      `UPDATE products SET image = $1 WHERE slug = $2 AND (image IS NULL OR image = '') RETURNING id`,
+      [m.image, key]
+    );
+    updated += res.rowCount;
+  }
+
+  if (updated > 0) console.log(`✅ Backfilled images for ${updated} products`);
 }
 
 async function seedAccessories(db) {
