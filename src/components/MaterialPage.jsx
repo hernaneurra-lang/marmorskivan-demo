@@ -564,6 +564,7 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
 
   const [infoOpen, setInfoOpen] = useState(false);
   const [infoGroup, setInfoGroup] = useState(null);
+  const [zoomedSrc, setZoomedSrc] = useState(null);
 
   const imagesMap = useImagesMap();
 
@@ -811,15 +812,28 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
         {infoGroup && (
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <div className="aspect-[4/3] rounded-xl overflow-hidden border">
+              <div
+                className="aspect-[4/3] rounded-xl overflow-hidden border cursor-zoom-in relative group"
+                onClick={() => {
+                  const src = buildImageCandidatesForBase(
+                    infoGroup.baseName, imagesMap,
+                    infoGroup.items?.find(it => it.image)?.image
+                  )[0];
+                  if (src) setZoomedSrc(src);
+                }}
+                title="Klicka för att zooma"
+              >
                 <ImageWithFallback
                   candidates={buildImageCandidatesForBase(
                     infoGroup.baseName, imagesMap,
                     infoGroup.items?.find(it => it.image)?.image
                   )}
                   alt={infoGroup.baseName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+                  <span className="bg-white/90 rounded-full px-3 py-1 text-xs text-gray-700 shadow">🔍 Zooma</span>
+                </div>
               </div>
             </div>
 
@@ -857,6 +871,33 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
           </div>
         )}
       </Modal>
+
+      {/* Lightbox zoom overlay */}
+      {zoomedSrc && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 cursor-zoom-out"
+          onClick={() => setZoomedSrc(null)}
+          onKeyDown={(e) => e.key === "Escape" && setZoomedSrc(null)}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+        >
+          <img
+            src={zoomedSrc}
+            alt=""
+            className="max-w-[92vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onError={(e) => { e.currentTarget.src = "/products/placeholder.jpg"; }}
+          />
+          <button
+            className="absolute top-4 right-4 bg-white/90 rounded-full w-9 h-9 flex items-center justify-center text-gray-700 hover:bg-white shadow text-lg"
+            onClick={() => setZoomedSrc(null)}
+            aria-label="Stäng zoom"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
