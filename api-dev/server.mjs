@@ -1592,8 +1592,9 @@ app.get("/api/admin/products", adminAuth, async (req, res) => {
     }
     if (has_price === "yes") conditions.push("price IS NOT NULL");
     if (has_price === "no")  conditions.push("price IS NULL");
-    if (has_image === "yes") conditions.push("image IS NOT NULL AND image != ''");
-    if (has_image === "no")  conditions.push("(image IS NULL OR image = '')");
+    if (has_image === "yes")         conditions.push("image IS NOT NULL AND image != '' AND image NOT LIKE '%placeholder%'");
+    if (has_image === "no")          conditions.push("(image IS NULL OR image = '')");
+    if (has_image === "placeholder") conditions.push("image LIKE '%placeholder%'");
 
     const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
 

@@ -255,6 +255,7 @@ function StonesTab({ headers, apiBase }) {
           <option value="">Alla bilder</option>
           <option value="yes">Har bild</option>
           <option value="no">Saknar bild</option>
+          <option value="placeholder">Placeholder-bild</option>
         </select>
         <button className="btn-primary" onClick={() => setAdding(true)}>+ Lägg till sten</button>
       </div>
