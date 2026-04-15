@@ -408,7 +408,9 @@ function buildImageCandidatesForBase(baseName, imagesMap, explicitImage) {
 
 /* ===== Normalize CSV row ===== */
 function normalizeRow(r) {
-  let baseName = String(r.name || "").replace(/\(\s*\d+\s*mm\s*\)\s*$/i, "").trim();
+  // base_name from DB preserves TitleCase; name from API has "(20 mm)" appended
+  const raw = String(r.base_name || r.name || "").trim();
+  let baseName = raw.replace(/\(\s*\d+\s*mm\s*\)\s*$/i, "").trim();
   baseName = baseName.replace(/\s+\d+\s*mm$/i, "").trim();
   return { ...r, baseName };
 }
@@ -445,6 +447,7 @@ function groupByBase(rows) {
     const thKey = th > 0 ? String(th) : "__unknown__";
 
     const candidate = {
+      ...r,                          // spread all fields including image
       thickness_mm: th || "",
       price: Number(r.price) || 0,
       row: r,
