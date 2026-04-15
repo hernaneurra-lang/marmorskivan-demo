@@ -299,6 +299,28 @@ export default function MaterialsSection({
       try {
         setLoading(true);
         setErr("");
+
+        // 1. Try Railway API
+        const apiBase = import.meta.env.VITE_CHAT_API_BASE || "";
+        const apiRes = await fetch(`${apiBase}/api/materials`, { cache: "no-store" }).catch(() => null);
+        if (apiRes?.ok) {
+          const data = await apiRes.json();
+          if (alive && Array.isArray(data) && data.length > 0) {
+            setRows(data.map(p => ({
+              ...p,
+              id:          p.slug || String(p.id),
+              name:        p.name || "",
+              category:    p.category || "",
+              thickness_mm: p.thickness_mm ? Number(p.thickness_mm) : "",
+              price:       p.price ? Number(p.price) : "",
+              edgePrice:   p.edge_price ? Number(p.edge_price) : "",
+              image:       normalizeImgPath(p.image),
+            })));
+            return;
+          }
+        }
+
+        // 2. Fallback: static CSV
         const base = import.meta.env.BASE_URL || "/";
         const res = await fetch(`${base}data/materials.csv`, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -377,8 +399,8 @@ export default function MaterialsSection({
           )}
 
           <div className="flex-1">
-            <div className="font-medium">{selectedName || "—"}</div>
-            <div className="text-sm text-gray-600">{selectedPriceText}</div>
+            <div className="font-medium text-gray-900">{selectedName || "—"}</div>
+            <div className="text-sm text-gray-700">{selectedPriceText}</div>
           </div>
         </div>
 
@@ -394,7 +416,7 @@ export default function MaterialsSection({
 
       {/* Snabbsök & direktbyte */}
       <div className="space-y-2">
-        <label className="text-sm text-gray-700">
+        <label className="text-sm text-gray-900 font-medium">
           {t("materialsSection.changeLabel", { defaultValue: "Change material" })}
         </label>
 
@@ -405,7 +427,7 @@ export default function MaterialsSection({
           placeholder={t("materialsSection.searchPlaceholder", {
             defaultValue: "Start typing (e.g. calacatta)…",
           })}
-          className="w-full rounded-xl border px-3 py-2"
+          className="w-full rounded-xl border px-3 py-2 text-gray-900"
         />
 
         {err && (
@@ -452,8 +474,8 @@ export default function MaterialsSection({
                     </div>
 
                     <div className="flex-1">
-                      <div className="text-sm font-medium">{m.name}</div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-sm font-medium text-gray-900">{m.name}</div>
+                      <div className="text-xs text-gray-700">
                         {categoryLabel}
                         {m.thickness_mm ? ` · ${m.thickness_mm} mm` : ""}
                       </div>
@@ -473,7 +495,7 @@ export default function MaterialsSection({
       {/* Länk till hela materialsidan */}
       <button
         type="button"
-        className="mt-3 w-full px-3 py-2 rounded-xl border hover:bg-gray-50"
+        className="mt-3 w-full px-3 py-2 rounded-xl border text-gray-900 hover:bg-gray-50"
         onClick={onRequestBrowse}
         title={t("materialsSection.browseTitle", { defaultValue: "Open materials page" })}
       >

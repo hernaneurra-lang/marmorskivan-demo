@@ -168,51 +168,78 @@ export default function App() {
     [i18n]
   );
 
-  // -------------------- CSV loader --------------------
+  // -------------------- Materials loader (API → CSV fallback) --------------------
   useEffect(() => {
     let cancelled = false;
 
+    function applyRows(rows) {
+      if (cancelled) return;
+      setMaterials(rows);
+      buildDynamicLexicon(rows);
+      const idx = new Map();
+      for (const r of rows) {
+        const baseKey = computeBaseKey(r);
+        const th = toInt(r.thickness_mm);
+        if (baseKey && th) idx.set(`${baseKey}__${th}`, r);
+      }
+      materialsIndexRef.current = idx;
+      setVariant((prev) => {
+        if (!prev || (prev.price && prev.price > 0)) return prev;
+        const bk = prev.baseKey || computeBaseKey(prev);
+        if (!bk) return prev;
+        const hit = idx.get(`${bk}__${prev.thicknessMm || 20}`) ||
+          [...idx.values()].find((r) => computeBaseKey(r) === bk);
+        if (!hit) return prev;
+        return { ...prev, price: Number(hit.price) || prev.price };
+      });
+    }
+
     async function loadMaterials() {
+      // 1. Try Railway API first
+      try {
+        const apiBase = import.meta.env.VITE_CHAT_API_BASE || "";
+        const res = await fetch(`${apiBase}/api/materials`, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && Array.isArray(data) && data.length > 0) {
+            const rows = data.map(p => ({
+              id:           p.slug || String(p.id),
+              webName:      p.slug || "",
+              name:         p.name || "",
+              base_name:    p.base_name || p.name || "",
+              category:     p.category || "",
+              thickness_mm: parseNumberLoose(p.thickness_mm),
+              price:        parseNumberLoose(p.price),
+              edgePrice:    parseNumberLoose(p.edge_price),
+              discount:     parseNumberLoose(p.discount),
+              status:       p.status || "available",
+              description:  p.description || "",
+              pros:         p.pros || "",
+              care:         p.care || "",
+              supplier:     p.supplier || "",
+              image:        normalizeImgPath(p.image),
+              featured:     p.featured || false,
+              sort_order:   p.sort_order || 9999,
+            }));
+            applyRows(rows);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("API materials load failed, falling back to CSV:", e.message);
+      }
+
+      // 2. Fallback: static CSV
       try {
         const base = import.meta.env.BASE_URL || "/";
         const urls = [`${base}data/materials.csv`, "/data/materials.csv"];
-
         let text = "";
         for (const url of urls) {
           const res = await fetch(url, { cache: "no-store" });
-          if (res.ok) {
-            text = await res.text();
-            break;
-          }
+          if (res.ok) { text = await res.text(); break; }
         }
         if (!text || cancelled) return;
-
-        const rows = parseMaterialsCsv(text);
-        if (cancelled) return;
-
-        setMaterials(rows);
-        buildDynamicLexicon(rows);
-
-        // Build index: baseKey__thickness -> row
-        const idx = new Map();
-        for (const r of rows) {
-          const baseKey = computeBaseKey(r);
-          const th = toInt(r.thickness_mm);
-          if (baseKey && th) idx.set(`${baseKey}__${th}`, r);
-        }
-        materialsIndexRef.current = idx;
-
-        // If variant was set from URL without a price (e.g. from trend stone "Beställ nu"),
-        // look it up by name in the freshly loaded index to get the real price.
-        setVariant((prev) => {
-          if (!prev || (prev.price && prev.price > 0)) return prev;
-          const bk = prev.baseKey || computeBaseKey(prev);
-          if (!bk) return prev;
-          const hit = idx.get(`${bk}__${prev.thicknessMm || 20}`) ||
-            [...idx.values()].find((r) => computeBaseKey(r) === bk);
-          if (!hit) return prev;
-          return { ...prev, price: Number(hit.price) || prev.price };
-        });
+        applyRows(parseMaterialsCsv(text));
       } catch (e) {
         console.error("CSV Load Error:", e);
       }

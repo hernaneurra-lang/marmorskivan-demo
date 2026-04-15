@@ -1531,6 +1531,23 @@ app.get("/api/admin/export/:type", adminAuth, async (req, res) => {
 // PRODUCTS (stenar) — CRUD
 // ════════════════════════════════════════
 
+// GET /api/materials — public product catalog (no auth required)
+app.get("/api/materials", async (_req, res) => {
+  if (!HAS_DB) return res.json([]);
+  try {
+    const { rows } = await query(
+      `SELECT id, slug, name, base_name, category, thickness_mm, price, edge_price,
+              discount, status, description, pros, care, supplier, image, featured, sort_order
+       FROM products
+       WHERE status != 'hidden'
+       ORDER BY featured DESC, sort_order ASC, name ASC`
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/admin/products — list with filters + sorting
 app.get("/api/admin/products", adminAuth, async (req, res) => {
   try {
