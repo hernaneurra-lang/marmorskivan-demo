@@ -8,7 +8,11 @@
 ## Deploy
 1. `npm run build:noprerender` → genererar `dist/`
 2. FTP via **WinSCP**: ta bort `assets/` på servern, sedan Synchronize (Remote)
-3. PHP-filer (`api/`, `boka-tid/`, `PHPMailer/`, `includes/`, `storage/`, `vendor/`) ska **aldrig** raderas — de ligger på samma Loopia-server
+3. **OBS: Två index.html måste uppdateras** efter varje build:
+   - `/app/index.html` ← ladda upp `dist/index.html` hit (tar prioritet framför root)
+   - Finns även från gamla prerender-byggen som `dist/app/index.html` på servern
+   - Enklast: ersätt `/app/index.html` på FTP manuellt med `dist/index.html` varje gång
+4. PHP-filer (`api/`, `boka-tid/`, `PHPMailer/`, `includes/`, `storage/`, `vendor/`) ska **aldrig** raderas — de ligger på samma Loopia-server
 
 ## Railway — backend
 - Backend körs på Railway, auto-deploy från `main` vid `git push`
