@@ -608,7 +608,18 @@ export default function MaterialPage({ onPick, presetCategory, materials = [] })
   const groups = useMemo(() => groupByBase(rows), [rows]);
 
   const categories = useMemo(() => {
-    const cats = unique(groups.map((g) => g.category));
+    const KNOWN = new Set([
+      "marmor","granit","kvartsit","kvarts/komposit","keramik","porslin",
+      "kalksten","travertin","terrazzo","onyx","semi precious",
+      "soapstone","dolomite",
+    ]);
+    const cats = unique(
+      groups
+        .map((g) => (g.category || "").trim().toLowerCase())
+        .filter((c) => c && KNOWN.has(c))
+    );
+    // Sort alphabetically
+    cats.sort((a, b) => a.localeCompare(b, "sv"));
     return ["all", ...cats];
   }, [groups]);
 

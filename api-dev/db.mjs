@@ -615,6 +615,7 @@ export async function migrate() {
   await seedProducts(db);
   await seedAccessories(db);
   await backfillProductImages(db);
+  await patchCategories(db);
 
   console.log("✅ DB migrated");
 }
@@ -668,6 +669,30 @@ async function seedProducts(db) {
     inserted++;
   }
   console.log(`✅ Seeded ${inserted} products`);
+}
+
+// Normalizes product categories to canonical values
+async function patchCategories(db) {
+  // [from, to] — only explicit merges, keep the rest as-is
+  const map = [
+    // porslin → keramik (merge)
+    ["porslin",                                 "keramik"],
+    // multi-value → canonical single value
+    ["semi precious,translucent,exotic stones", "semi precious"],
+    ["exotic stones,dolomite",                  "dolomite"],
+    ["translucent,exotic stones,onyx",          "onyx"],
+    ["stoneglass",                              "semi precious"],
+  ];
+
+  let updated = 0;
+  for (const [from, to] of map) {
+    const res = await db.query(
+      `UPDATE products SET category = $1 WHERE TRIM(LOWER(category)) = TRIM(LOWER($2)) AND category != $1`,
+      [to, from]
+    );
+    updated += res.rowCount;
+  }
+  if (updated > 0) console.log(`✅ Normalized ${updated} product categories`);
 }
 
 // Fills in image field for products that have empty image, using materialsInfo.json as source
