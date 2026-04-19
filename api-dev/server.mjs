@@ -1998,10 +1998,10 @@ app.patch("/api/admin/blog/posts/:id", adminAuth, async (req, res) => {
 });
 
 // ── Photo renders: log (public) ──
-const geoCache = new Map();
+const renderGeoCache = new Map();
 async function reverseGeocode(lat, lng) {
   const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
-  if (geoCache.has(key)) return geoCache.get(key);
+  if (renderGeoCache.has(key)) return renderGeoCache.get(key);
   try {
     const res = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=sv`,
@@ -2010,8 +2010,8 @@ async function reverseGeocode(lat, lng) {
     if (!res.ok) return null;
     const d = await res.json();
     const result = { city: d.city || d.locality || d.principalSubdivision || null, country: d.countryName || null, country_code: d.countryCode || null };
-    geoCache.set(key, result);
-    setTimeout(() => geoCache.delete(key), 3600_000);
+    renderGeoCache.set(key, result);
+    setTimeout(() => renderGeoCache.delete(key), 3600_000);
     return result;
   } catch { return null; }
 }
