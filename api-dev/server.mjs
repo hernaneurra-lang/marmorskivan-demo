@@ -2020,19 +2020,26 @@ async function reverseGeocode(lat, lng) {
 app.post("/api/renders/log", async (req, res) => {
   if (!HAS_DB) return res.json({ ok: true });
   const { material, mode, has_selection, photo_width, photo_height, orientation_corrected, device, gps_lat, gps_lng } = req.body || {};
+  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.ip || null;
+  const user_agent = req.headers["user-agent"] || null;
   try {
     let city = null, country = null, country_code = null;
     if (gps_lat && gps_lng) {
+      // GPS from EXIF takes priority
       const geo = await reverseGeocode(Number(gps_lat), Number(gps_lng));
       if (geo) { city = geo.city; country = geo.country; country_code = geo.country_code; }
+    } else if (ip) {
+      // Fallback: IP-based geo
+      const geo = await lookupGeo(ip);
+      if (geo) { city = geo.city; country = geo.country; country_code = geo.countryCode; }
     }
     await query(
-      `INSERT INTO photo_renders (material, mode, has_selection, photo_width, photo_height, orientation_corrected, device, gps_lat, gps_lng, city, country, country_code)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      `INSERT INTO photo_renders (material, mode, has_selection, photo_width, photo_height, orientation_corrected, device, gps_lat, gps_lng, city, country, country_code, ip, user_agent)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
       [material||null, mode||null, Boolean(has_selection), photo_width||null, photo_height||null,
        Boolean(orientation_corrected), device||null,
        gps_lat ? Number(gps_lat) : null, gps_lng ? Number(gps_lng) : null,
-       city, country, country_code]
+       city, country, country_code, ip, user_agent]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2045,7 +2052,8 @@ app.get("/api/admin/renders", adminAuth, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 200, 500);
     const { rows } = await query(
       `SELECT id, created_at, material, mode, has_selection, photo_width, photo_height,
-              orientation_corrected, device, gps_lat, gps_lng, city, country, country_code
+              orientation_corrected, device, gps_lat, gps_lng, city, country, country_code,
+              ip, user_agent
        FROM photo_renders ORDER BY created_at DESC LIMIT $1`,
       [limit]
     );

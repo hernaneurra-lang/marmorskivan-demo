@@ -182,6 +182,10 @@ export async function migrate() {
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS user_agent TEXT;
     ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS country_code TEXT;
   `);
+  await db.query(`
+    ALTER TABLE photo_renders ADD COLUMN IF NOT EXISTS ip TEXT;
+    ALTER TABLE photo_renders ADD COLUMN IF NOT EXISTS user_agent TEXT;
+  `);
 
   // Seed default site settings if not present
   const settingsDefaults = [
