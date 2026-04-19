@@ -1997,6 +1997,61 @@ app.patch("/api/admin/blog/posts/:id", adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Photo renders: log (public) ──
+const geoCache = new Map();
+async function reverseGeocode(lat, lng) {
+  const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  if (geoCache.has(key)) return geoCache.get(key);
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=sv`,
+      { headers: { "User-Agent": "marmorskivan.se/1.0" }, signal: AbortSignal.timeout(4000) }
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    const result = { city: d.city || d.locality || d.principalSubdivision || null, country: d.countryName || null, country_code: d.countryCode || null };
+    geoCache.set(key, result);
+    setTimeout(() => geoCache.delete(key), 3600_000);
+    return result;
+  } catch { return null; }
+}
+
+app.post("/api/renders/log", async (req, res) => {
+  if (!HAS_DB) return res.json({ ok: true });
+  const { material, mode, has_selection, photo_width, photo_height, orientation_corrected, device, gps_lat, gps_lng } = req.body || {};
+  try {
+    let city = null, country = null, country_code = null;
+    if (gps_lat && gps_lng) {
+      const geo = await reverseGeocode(Number(gps_lat), Number(gps_lng));
+      if (geo) { city = geo.city; country = geo.country; country_code = geo.country_code; }
+    }
+    await query(
+      `INSERT INTO photo_renders (material, mode, has_selection, photo_width, photo_height, orientation_corrected, device, gps_lat, gps_lng, city, country, country_code)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [material||null, mode||null, Boolean(has_selection), photo_width||null, photo_height||null,
+       Boolean(orientation_corrected), device||null,
+       gps_lat ? Number(gps_lat) : null, gps_lng ? Number(gps_lng) : null,
+       city, country, country_code]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Photo renders: admin list ──
+app.get("/api/admin/renders", adminAuth, async (req, res) => {
+  if (!HAS_DB) return res.json([]);
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 200, 500);
+    const { rows } = await query(
+      `SELECT id, created_at, material, mode, has_selection, photo_width, photo_height,
+              orientation_corrected, device, gps_lat, gps_lng, city, country, country_code
+       FROM photo_renders ORDER BY created_at DESC LIMIT $1`,
+      [limit]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Start ──
 async function start() {
   if (HAS_DB) {

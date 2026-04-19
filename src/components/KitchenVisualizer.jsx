@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Sparkles, X, Download, RefreshCw, ChevronRight, Clock, Upload, ImagePlus, Maximize2 } from "lucide-react";
 import { trackEvent } from "../lib/analytics";
+import exifr from "exifr";
 
 const API_BASE = import.meta.env.VITE_CHAT_API_BASE || "";
 const COOLDOWN_SECS = 60;
@@ -380,22 +381,50 @@ export default function KitchenVisualizer({ materialName, materialImage, shape, 
     }
   }, [toolMode]);
 
-  // File upload
-  function handleFile(file) {
+  // File upload with EXIF extraction + auto-rotation
+  async function handleFile(file) {
     if (!file || !file.type.startsWith("image/")) return;
     if (file.size > MAX_PHOTO_BYTES) { alert("Bilden är för stor (max 10 MB)."); return; }
+
+    // Extract EXIF metadata (orientation, device, GPS)
+    let exifMeta = null;
+    try { exifMeta = await exifr.parse(file, ["Orientation", "Make", "Model", "latitude", "longitude"]); } catch {}
+
+    const orientation = exifMeta?.Orientation || 1;
+    const orientationCorrected = [3, 6, 8].includes(orientation);
+    const device = [exifMeta?.Make, exifMeta?.Model].filter(Boolean).join(" ") || null;
+    const gps_lat = exifMeta?.latitude ?? null;
+    const gps_lng = exifMeta?.longitude ?? null;
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
+        // Step 1: draw at natural size with orientation correction
+        const swapped = orientation === 6 || orientation === 8;
+        const tmpW = swapped ? img.height : img.width;
+        const tmpH = swapped ? img.width : img.height;
+        const tmp = document.createElement("canvas");
+        tmp.width = tmpW; tmp.height = tmpH;
+        const tctx = tmp.getContext("2d");
+        if (orientation === 3) { tctx.translate(tmpW, tmpH); tctx.rotate(Math.PI); }
+        else if (orientation === 6) { tctx.translate(tmpW, 0); tctx.rotate(Math.PI / 2); }
+        else if (orientation === 8) { tctx.translate(0, tmpH); tctx.rotate(-Math.PI / 2); }
+        tctx.drawImage(img, 0, 0);
+
+        // Step 2: scale down to max 1024px
         const MAX = 1024;
-        const scale = img.width > MAX ? MAX / img.width : 1;
-        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const scale = Math.min(1, MAX / Math.max(tmpW, tmpH));
+        const w = Math.round(tmpW * scale), h = Math.round(tmpH * scale);
         const c = document.createElement("canvas");
         c.width = w; c.height = h;
-        c.getContext("2d").drawImage(img, 0, 0, w, h);
-        setKitchenPhoto({ dataUrl: c.toDataURL("image/jpeg", 0.82), name: file.name });
-        // Auto-open selection modal after upload
+        c.getContext("2d").drawImage(tmp, 0, 0, w, h);
+
+        setKitchenPhoto({
+          dataUrl: c.toDataURL("image/jpeg", 0.82),
+          name: file.name,
+          exif: { device, gps_lat, gps_lng, orientationCorrected, width: w, height: h },
+        });
         setTimeout(() => setSelectOpen(true), 300);
       };
       img.src = ev.target.result;
@@ -463,6 +492,24 @@ export default function KitchenVisualizer({ materialName, materialImage, shape, 
       setResultOpen(true);
       const mode = kitchenPhoto ? (selection ? "mask" : "edit") : "generate";
       trackEvent("kitchen_render", { material: materialName, mode, shape, thicknessMm });
+
+      // Log render metadata (EXIF + context) to backend
+      const exif = kitchenPhoto?.exif || {};
+      fetch(`${API_BASE}/api/renders/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          material: materialName,
+          mode,
+          has_selection: Boolean(selSnap),
+          photo_width: exif.width || origSnap?.w || null,
+          photo_height: exif.height || origSnap?.h || null,
+          orientation_corrected: exif.orientationCorrected || false,
+          device: exif.device || null,
+          gps_lat: exif.gps_lat || null,
+          gps_lng: exif.gps_lng || null,
+        }),
+      }).catch(() => {});
     } catch (e) {
       setErrorMsg(e.message || "Något gick fel");
       setGenState("error");

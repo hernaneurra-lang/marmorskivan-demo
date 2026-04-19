@@ -129,6 +129,24 @@ export async function migrate() {
     CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings(booking_date);
     CREATE INDEX IF NOT EXISTS blog_posts_week_idx ON blog_posts(week_number, publish_year);
     ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT 'white';
+
+    CREATE TABLE IF NOT EXISTS photo_renders (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      material TEXT,
+      mode TEXT,
+      has_selection BOOLEAN DEFAULT false,
+      photo_width INT,
+      photo_height INT,
+      orientation_corrected BOOLEAN DEFAULT false,
+      device TEXT,
+      gps_lat DOUBLE PRECISION,
+      gps_lng DOUBLE PRECISION,
+      city TEXT,
+      country TEXT,
+      country_code TEXT
+    );
+    CREATE INDEX IF NOT EXISTS photo_renders_created_idx ON photo_renders(created_at);
   `);
 
   // Safe column additions for existing deployments
