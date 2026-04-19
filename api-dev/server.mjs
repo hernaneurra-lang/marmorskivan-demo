@@ -601,8 +601,9 @@ app.post("/api/ai-render", async (req, res) => {
     renderCooldowns.set(ip, Date.now() + RENDER_COOLDOWN_MS);
     res.json({ imageUrl });
   } catch (e) {
-    console.error("[ai-render]", e.message);
-    res.status(500).json({ error: e.message });
+    console.error("[ai-render] FULL ERROR:", e);
+    console.error("[ai-render] cause:", e.cause);
+    res.status(500).json({ error: e.message, cause: e.cause?.message });
   } finally {
     activeRenders.delete(ip);
   }
