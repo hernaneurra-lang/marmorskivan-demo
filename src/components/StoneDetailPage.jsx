@@ -82,6 +82,7 @@ export default function StoneDetailPage({
   heroMode,
   heroVariant = "cover",
   heroHeightClass = "h-80",
+  publishedAt,
 }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -165,15 +166,17 @@ export default function StoneDetailPage({
     })),
   };
 
+  const isBlogPost = breadcrumbMiddleTo === "/blogg";
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": isBlogPost ? "BlogPosting" : "Article",
     headline: h1,
     description: metaDescription,
     mainEntityOfPage: urlFor(pathname),
     image: heroImage ? urlFor(resolveAssetUrl(heroImage)) : undefined,
-    author: { "@type": "Organization", name: "Marmorskivan.se" },
-    publisher: { "@type": "Organization", name: "Marmorskivan.se" },
+    author: { "@type": "Organization", name: "Marmorskivan.se", url: "https://marmorskivan.se" },
+    publisher: { "@type": "Organization", name: "Marmorskivan.se", url: "https://marmorskivan.se" },
+    ...(publishedAt ? { datePublished: new Date(publishedAt).toISOString() } : {}),
   };
 
   const tocTitle = t("stoneDetail.toc.title", { defaultValue: "Innehåll på sidan" });

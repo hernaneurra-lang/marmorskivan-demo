@@ -72,6 +72,7 @@ export default function BlogPostPage() {
         breadcrumbMiddleLabel="Blogg"
         breadcrumbMiddleTo="/blogg"
         textSize="base"
+        publishedAt={post.published_at || post.created_at}
       />
     </>
   );

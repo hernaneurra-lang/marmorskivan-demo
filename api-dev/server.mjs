@@ -2061,6 +2061,25 @@ app.get("/api/admin/renders", adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Dynamic blog sitemap ──
+app.get("/sitemap-blog.xml", async (_req, res) => {
+  res.set("Content-Type", "application/xml; charset=utf-8");
+  res.set("Cache-Control", "public, max-age=3600");
+  if (!HAS_DB) return res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
+  try {
+    const { rows } = await query(
+      `SELECT slug, updated_at, created_at FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC`
+    );
+    const urls = rows.map(r => {
+      const mod = (r.updated_at || r.created_at || new Date()).toISOString().split("T")[0];
+      return `  <url>\n    <loc>https://marmorskivan.se/blogg/${r.slug}</loc>\n    <lastmod>${mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
+    }).join("\n");
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://marmorskivan.se/blogg</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n${urls}\n</urlset>`);
+  } catch (e) {
+    res.status(500).send("<!-- sitemap error -->");
+  }
+});
+
 // ── Start ──
 async function start() {
   if (HAS_DB) {

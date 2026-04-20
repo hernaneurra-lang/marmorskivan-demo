@@ -67,9 +67,26 @@ function safeGet(row, idx) {
 }
 
 /**
+ * Hämtar publicerade blogg-sluggar från Railway API (om tillgänglig)
+ */
+async function fetchBlogSlugs() {
+  const apiBase = process.env.VITE_CHAT_API_BASE || process.env.API_BASE || "";
+  if (!apiBase) return [];
+  try {
+    const res = await fetch(`${apiBase}/api/blog/posts?limit=200`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const posts = Array.isArray(data) ? data : (data.posts || []);
+    return posts.map(p => p.slug).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Samlar ihop alla rutter som ska förhandsrenderas
  */
-function buildRoutes() {
+async function buildRoutes() {
   const routes = new Set([
     "/",
     "/material",
@@ -98,6 +115,13 @@ function buildRoutes() {
     "/blogg",
   ]);
 
+  // Fetch blog slugs dynamically
+  const blogSlugs = await fetchBlogSlugs();
+  blogSlugs.forEach(slug => routes.add(`/blogg/${slug}`));
+  if (blogSlugs.length > 0) {
+    console.log(`ℹ️  Added ${blogSlugs.length} blog routes: ${blogSlugs.join(", ")}`);
+  }
+
   if (fs.existsSync(publicCsv)) {
     const text = fs.readFileSync(publicCsv, "utf8");
     const table = parseCsv(text);
@@ -119,7 +143,7 @@ function buildRoutes() {
   return [...routes];
 }
 
-function run() {
+async function run() {
   console.log(`ℹ️ generate-prerender-links using OUT_DIR="${OUT_DIR}" -> ${distPath}`);
 
   if (!fs.existsSync(distPath)) {
@@ -128,7 +152,7 @@ function run() {
     process.exit(1);
   }
 
-  const routes = buildRoutes();
+  const routes = await buildRoutes();
   const html =
     `<!doctype html><meta charset="utf-8"><title>prerender links</title>\n` +
     routes.map((r) => `<a href="${r}">${r}</a>`).join("\n");
