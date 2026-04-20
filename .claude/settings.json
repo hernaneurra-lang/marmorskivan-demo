@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls c:/dev/marmorskivan-demo/.env*)",
+      "Bash(ls c:/dev/marmorskivan-demo/node_modules/openai/resources/images*)",
+      "Bash(grep -r \"marmorskivan\\\\|railway\\\\|loopia\\\\|VITE_CHAT_API\" .env* vite.config* package.json)",
+      "Bash(grep -r \"marmorskivan.se\\\\|loopia\\\\|hostname\" vite.config* package.json CLAUDE.md)",
+      "Bash(ls c:/dev/marmorskivan-demo/dist/sitemap*.xml)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\" \"https://marmorskivan.se/bankskiva-sten/\")",
+      "Bash(curl -s \"https://marmorskivan.se/bankskiva-sten/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://marmorskivan.se/assets/index-VSA9W7hL.js\")",
+      "Bash(curl -s -w \"\\\\n%{content_type}\" \"https://marmorskivan.se/assets/index-VSA9W7hL.js\")",
+      "Bash(curl -sI \"https://marmorskivan.se/material/marmor/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://marmorskivan.se/material/marmor/\")",
+      "Bash(curl -s \"https://marmorskivan.se/material/marmor/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\" \"https://marmorskivan.se/assets/index-DFDse2A3.css\")",
+      "Bash(curl -s \"https://marmorskivan.se/material/onyx/\")",
+      "Bash(grep -l \"railway.app\" c:/dev/marmorskivan-demo/dist/assets/*.js)",
+      "WebFetch(domain:marmorskivan.se)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(grep -n \"^  \\);$\\\\|^}$\" c:/dev/marmorskivan-demo/src/pages/CalculatorPage.jsx)",
+      "Bash(ls c:/dev/marmorskivan-demo/*.md)",
+      "Bash(git -C c:/dev/marmorskivan-demo status WHITEPAPER.md README.md CLAUDE.md .claude/settings.json)",
+      "Bash(ls /c/dev/marmorskivan-demo/public/data/*.json)",
+      "Bash(curl -s https://marmorskivan-demo.up.railway.app/health)",
+      "Bash(curl -s \"https://marmorskivan-demo-production.up.railway.app/api/materials\")",
+      "Bash(curl -s \"https://marmorskivan.se/app/\")",
+      "Bash(curl -s \"https://marmorskivan.se/data/imageMap.json\")",
+      "Bash(curl -s \"https://marmorskivan-demo-production.up.railway.app/api/admin/products/categories\" -H \"Authorization: Bearer marmorskivan-admin\")",
+      "WebFetch(domain:stenhemma.se)",
+      "WebFetch(domain:stenskivor.se)",
+      "WebFetch(domain:www.bedrockcountertops.com)",
+      "WebFetch(domain:stoneparkusa.com)",
+      "WebFetch(domain:academy-marble.com)",
+      "Bash(git commit:*)"
+    ],
+    "additionalDirectories": [
+      "\\tmp",
+      "c:\\dev\\marmorskivan-demo\\.claude"
+    ]
+  }
+}
